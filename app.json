@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "MuList",
+    "slug": "mulist",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f7f5ef"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mulist.app",
+      "buildNumber": "1",
+      "googleServicesFile": "./GoogleService-Info.plist"
+    },
+    "android": {
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#f7f5ef"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.mulist.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-audio", "expo-sqlite", "expo-asset"]
+  }
+}
