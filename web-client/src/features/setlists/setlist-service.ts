@@ -1,0 +1,6 @@
+import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, type Unsubscribe } from 'firebase/firestore';
+import { db } from '@/lib/firebase'; import type { Setlist } from '@/types/song';
+export function subscribeSetlists(uid:string,next:(value:Setlist[])=>void,fail:(e:Error)=>void):Unsubscribe{return onSnapshot(query(collection(db,'users',uid,'setlists'),orderBy('updatedAt','desc')),snap=>next(snap.docs.map(v=>({id:v.id,...v.data()} as Setlist)).filter(v=>!v.deletedAt)),fail);}
+export async function createSetlist(uid:string,title:string,eventName:string,eventDate:string,songIds:string[]){const target=doc(collection(db,'users',uid,'setlists'));await setDoc(target,{title,eventName,eventDate,songIds,deletedAt:null,deviceId:'web',revision:1,updatedAt:Timestamp.now()});}
+export async function updateSetlist(uid:string,item:Setlist,values:{title:string;eventName:string;eventDate:string;songIds:string[]}){await updateDoc(doc(db,'users',uid,'setlists',item.id),{...values,updatedAt:serverTimestamp(),revision:item.revision+1,deviceId:'web'});}
+export async function deleteSetlist(uid:string,item:Setlist){await updateDoc(doc(db,'users',uid,'setlists',item.id),{deletedAt:serverTimestamp(),updatedAt:serverTimestamp(),revision:item.revision+1,deviceId:'web'});}
