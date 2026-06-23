@@ -5,7 +5,12 @@ import type { Song } from '../../../domain/models';
 import { getRepositories } from '../../../storage';
 import { reportError } from '../../../shared/logging/reportError';
 import { deleteSongPackage } from '../../../storage/songPackageFiles';
-import { pickAndImportPdfFiles } from '../../import/services/importPdfFiles';
+import {
+  importScoreImages,
+  pickAndImportPdfFiles,
+  pickScoreImages,
+  type SelectedImageAsset,
+} from '../../import/services/importPdfFiles';
 import { syncSongNow } from '../../cloud/services/syncWorker';
 import { createThreeDayShare } from '../../cloud/services/sharingService';
 import type { ScoreMetadata } from '../../pdf-viewer/components/ScoreSettingsModal';
@@ -251,10 +256,61 @@ export function useLibrary() {
     }
   }, [load, state.selectedTag, state.view]);
 
+  const pickImages = useCallback(async () => {
+    try {
+      setState((current) => ({ ...current, error: null }));
+      return await pickScoreImages();
+    } catch (error: unknown) {
+      reportError('악보 이미지 선택 실패', error);
+      setState((current) => ({
+        ...current,
+        error:
+          error instanceof Error
+            ? error.message
+            : '갤러리 이미지를 선택하지 못했습니다.',
+      }));
+      return null;
+    }
+  }, []);
+
+  const importImages = useCallback(
+    async (assets: readonly SelectedImageAsset[]) => {
+      setState((current) => ({
+        ...current,
+        error: null,
+        isImporting: true,
+        notice: '이미지를 PDF로 변환하는 중…',
+      }));
+      try {
+        const report = await importScoreImages(assets);
+        setState((current) => ({
+          ...current,
+          notice: `${assets.length}장으로 PDF 악보 ${report.importedCount}곡을 추가했습니다. OCR 제목 인식을 대기 중입니다.`,
+        }));
+        await load(state.view, state.selectedTag);
+      } catch (error: unknown) {
+        reportError('이미지 PDF 가져오기 실패', error);
+        setState((current) => ({
+          ...current,
+          error:
+            error instanceof Error
+              ? error.message
+              : '이미지를 PDF로 가져오지 못했습니다.',
+          notice: null,
+        }));
+      } finally {
+        setState((current) => ({ ...current, isImporting: false }));
+      }
+    },
+    [load, state.selectedTag, state.view],
+  );
+
   return {
     ...state,
+    importImages,
     importPdfs,
     moveToTrash,
+    pickImages,
     refresh: () => load(state.view, state.selectedTag),
     restore,
     selectTag,

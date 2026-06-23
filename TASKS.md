@@ -30,6 +30,8 @@
 - [x] Tag Presets and Alias IDs
 - [x] Easy Tag Selection in Score Settings
 - [x] Tag Alias Search
+- [x] CCM Tag Preset with Church-Music Aliases
+- [x] Indie Tag Preset with Korean Aliases
 - [x] Library Header Count and Action Symbols
 - [x] Library Card Action Icons
 - [x] Stable Library Order on Favorite Change
@@ -52,6 +54,10 @@
 - [x] Batch PDF Import
 - [x] Auto Title Detection
 - [x] Duplicate Detection
+- [x] Gallery Image Multi-Selection
+- [x] Image Page Order Modal
+- [x] Merge Ordered Images into One A4 PDF
+- [x] Image Downscaling before PDF Conversion
 
 # PDF Viewer
 
@@ -109,6 +115,8 @@
 - [x] OCR Pipeline
 - [x] Background Processing
 - [x] Search Index
+- [x] Largest OCR Block Title Post-Processing
+- [ ] Connect On-Device Image OCR Recognizer
 
 # Search
 
@@ -355,8 +363,9 @@
 ### Sync
 
 - [x] Sync 상태 보기
-- [ ] 강제 동기화 실행
-- [ ] Sync 로그 보기
+- [x] 지금 모든 곡 데이터 동기화
+- [x] 우측 하단 실시간 Sync 로그 및 1분 자동 숨김
+- [x] Sync 로그 보기
 
 ### Debug
 
@@ -371,6 +380,8 @@
 - [x] 버그 제보
 - [x] 기능 제안
 - [x] 문의하기
+- [x] 지원 - 모든 로그 보기
+- [x] Persistent Error and Sync Log Storage
 
 ### Diagnostic Data
 

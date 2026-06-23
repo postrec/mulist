@@ -21,8 +21,12 @@
       database migration v4.
 - [ ] Connect and validate an on-device OCR recognizer that accepts PDF page images and
       supports Korean, English, and Japanese. The persistent OCR pipeline, background
-      worker, retries, storage, and search indexing are implemented, but Expo SDK 56's
-      bundled Managed modules do not provide this recognition engine.
+      worker, retries, storage, search indexing, and largest-block image-title update are
+      implemented, but Expo Go's bundled Managed modules do not provide this recognition
+      engine.
+- [ ] After choosing an Expo Development Build OCR engine, return bounding text blocks
+      with height values so gallery imports can reliably choose the visually largest
+      title instead of the text-only first-line fallback.
 - [ ] Verify the new page-anchored annotation canvases, Pencil scroll suppression, and
       stabilized focal-point-preserving pinch zoom with real multi-page PDFs on the target iPad.
       Legacy version 1 strokes have no page identity and intentionally fall back to
@@ -33,8 +37,8 @@
       with annotation canvases visible.
 - [ ] Tune the default Apple Pencil smoothing value after comparing levels 0, 2, 5,
       and 10 with real handwriting on the target iPad. The current default is 2.
-- [ ] Decide whether users can create and edit custom tag presets. The MVP currently
-      ships a fixed canonical preset list while preserving unknown legacy tag IDs.
+- [x] Keep Song tag editing limited to the fixed preset catalog. The temporary custom
+      tag editor was removed, and CCM/교회음악/교회 now resolve to canonical `ccm`.
 
 ## Firebase Setup
 

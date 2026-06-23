@@ -11,6 +11,12 @@ import { restoreCloudLibrary, uploadSongPackage } from './songPackageCloud';
 
 let running: Promise<void> | null = null;
 
+export interface SyncAllResult {
+  failed: number;
+  synced: number;
+  total: number;
+}
+
 export function runCloudSync(): Promise<void> {
   running ??= execute().finally(() => {
     running = null;
@@ -28,6 +34,45 @@ export async function syncSongNow(songId: string): Promise<void> {
   await uploadSongPackage(uid, songId);
   const repositories = await getRepositories();
   await repositories.syncQueue.removeForEntity('song', songId);
+}
+
+export async function syncAllSongsNow(
+  onLog: (message: string) => void,
+): Promise<SyncAllResult> {
+  if (!firebaseAuth.currentUser) {
+    throw new Error('전체 동기화를 실행하려면 먼저 로그인해 주세요.');
+  }
+  const repositories = await getRepositories();
+  const songs = (await repositories.songs.findAllIncludingDeleted()).filter(
+    (song) => !song.deletedAt,
+  );
+  let synced = 0;
+  let failed = 0;
+  const writeLog = async (
+    message: string,
+    level: 'error' | 'info' = 'info',
+  ) => {
+    onLog(message);
+    await repositories.logs.add(level, message);
+  };
+
+  await writeLog(`전체 곡 동기화 시작 · ${songs.length}곡`);
+  for (const [index, song] of songs.entries()) {
+    await writeLog(`[${index + 1}/${songs.length}] ${song.title} 동기화 중`);
+    try {
+      await syncSongNow(song.id);
+      synced += 1;
+      await writeLog(`✓ ${song.title} 완료`);
+    } catch (reason: unknown) {
+      failed += 1;
+      const message =
+        reason instanceof Error ? reason.message : '알 수 없는 동기화 오류';
+      await writeLog(`✕ ${song.title}: ${message}`, 'error');
+      reportError(`전체 동기화 곡 실패: ${song.id}`, reason);
+    }
+  }
+  await writeLog(`전체 동기화 종료 · 성공 ${synced} · 실패 ${failed}`);
+  return { failed, synced, total: songs.length };
 }
 
 async function execute(): Promise<void> {

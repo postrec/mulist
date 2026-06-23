@@ -44,7 +44,7 @@ export function ScoreSettingsModal({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [tags, setTags] = useState<readonly string[]>(
-    normalizeTagIds(song.tags),
+    normalizePresetTagIds(song.tags),
   );
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export function ScoreSettingsModal({
     setArtist(song.artist);
     setBpm(song.bpm === null ? '' : String(song.bpm));
     setError(null);
-    setTags(normalizeTagIds(song.tags));
+    setTags(normalizePresetTagIds(song.tags));
   }, [song, visible]);
 
   const save = async () => {
@@ -197,6 +197,11 @@ function Field({
       />
     </View>
   );
+}
+
+function normalizePresetTagIds(values: readonly string[]): readonly string[] {
+  const presetIds = new Set(tagPresets.map((preset) => preset.id));
+  return normalizeTagIds(values).filter((tag) => presetIds.has(tag));
 }
 
 const styles = StyleSheet.create({

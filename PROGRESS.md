@@ -648,3 +648,32 @@
 - The cache is capped at three PDF.js WebViews. Active and predicted next Songs are
   protected while the least-recently-used Song outside the current prediction window
   is unmounted, releasing its PDF document, Base64 data, and canvas memory.
+
+## 2026-06-23 — Image Scores, Force Sync, and App Logs
+
+- Added a Library import chooser for PDF files or gallery images. Gallery selection
+  supports up to 30 images and immediately opens an ordering modal with page previews
+  and explicit up/down controls.
+- Ordered images are resized to an A4-appropriate maximum width, encoded into one
+  paginated HTML document, exported as a single PDF, copied into the normal Song
+  Package, duplicate-checked, and queued through the existing OCR pipeline.
+- Extended OCR results with optional text blocks. When recognition completes, the
+  highest block becomes the title for an `이미지 악보`; legacy text-only OCR falls back
+  to its first non-empty line. The actual Expo-compatible recognition engine remains a
+  device integration dependency.
+- Added `지금 모든 곡 데이터 동기화` to Cloud Sync settings. It uploads every active
+  Song sequentially, persists each progress/error entry, and displays the latest lines
+  in a bottom-right panel. A fully successful run dismisses the panel after one minute.
+- Activated the existing SQLite `sync_logs` table as a bounded 1,000-entry application
+  log store. MuList error reporting and manual sync progress now persist there, and the
+  Support section includes an All Logs screen with refresh, selectable messages, and
+  clear-all controls.
+
+## 2026-06-23 — CCM Tag Preset
+
+- Removed the short-lived per-Song custom-tag editor and returned Song metadata to the
+  fixed preset catalog.
+- Added canonical tag ID `ccm` with visible label `CCM`; `교회음악` and `교회` now
+  normalize to the same ID in storage and tag search.
+- Added canonical tag ID `indie` with visible label `Indie`; `인디` and `인디밴드`
+  normalize to it through the same preset and search alias path.

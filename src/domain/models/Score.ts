@@ -34,8 +34,15 @@ export interface NoteLayer {
 }
 
 export interface OcrData {
+  blocks?: readonly OcrTextBlock[];
   text: string;
   languages: readonly OcrLanguage[];
+}
+
+export interface OcrTextBlock {
+  height: number;
+  text: string;
+  width?: number;
 }
 
 export type ScorePageLayout = 'single' | 'two-page';

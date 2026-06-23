@@ -19,6 +19,8 @@ import { LibraryEmptyState } from '../components/LibraryEmptyState';
 import { LibraryHeader } from '../components/LibraryHeader';
 import { SongListItem } from '../components/SongListItem';
 import { SongActionsModal } from '../components/SongActionsModal';
+import { ImageOrderModal } from '../../import/components/ImageOrderModal';
+import type { SelectedImageAsset } from '../../import/services/importPdfFiles';
 import {
   ScoreSettingsModal,
   type ScoreMetadata,
@@ -39,6 +41,8 @@ interface LibraryScreenProps {
   view: LibraryView;
   selectedTag: string | null;
   onImportPress?: () => void;
+  onImageImport: (assets: readonly SelectedImageAsset[]) => Promise<void>;
+  onImagePick: () => Promise<readonly SelectedImageAsset[] | null>;
   onRestorePress: (song: Song) => void;
   onSearchPress: () => void;
   onSetlistsPress: () => void;
@@ -73,6 +77,8 @@ export function LibraryScreen({
   view,
   selectedTag,
   onImportPress = doNothing,
+  onImageImport,
+  onImagePick,
   onRestorePress,
   onSearchPress,
   onSetlistsPress,
@@ -87,6 +93,24 @@ export function LibraryScreen({
   const columnCount = width >= 560 ? 2 : 1;
   const [actionSong, setActionSong] = useState<Song | null>(null);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [pendingImages, setPendingImages] = useState<
+    readonly SelectedImageAsset[]
+  >([]);
+
+  const chooseImportSource = () => {
+    Alert.alert('악보 가져오기', '가져올 파일 종류를 선택하세요.', [
+      { style: 'cancel', text: '취소' },
+      { onPress: onImportPress, text: 'PDF 파일' },
+      {
+        onPress: () => {
+          void onImagePick().then((assets) => {
+            if (assets && assets.length > 0) setPendingImages(assets);
+          });
+        },
+        text: '갤러리 이미지',
+      },
+    ]);
+  };
 
   const editSong = (song: Song) => {
     setActionSong(null);
@@ -120,7 +144,7 @@ export function LibraryScreen({
       <View style={styles.container}>
         <LibraryHeader
           isImporting={isImporting}
-          onImportPress={onImportPress}
+          onImportPress={chooseImportSource}
           onSearchPress={onSearchPress}
           onSetlistsPress={onSetlistsPress}
           onSocialPress={onSocialPress}
@@ -182,7 +206,7 @@ export function LibraryScreen({
                 style={styles.loading}
               />
             ) : (
-              <LibraryEmptyState {...getEmptyState(view, onImportPress)} />
+              <LibraryEmptyState {...getEmptyState(view, chooseImportSource)} />
             )
           }
           numColumns={columnCount}
@@ -223,6 +247,15 @@ export function LibraryScreen({
             visible
           />
         ) : null}
+        <ImageOrderModal
+          assets={pendingImages}
+          importing={isImporting}
+          onCancel={() => setPendingImages([])}
+          onConfirm={(assets) => {
+            void onImageImport(assets).then(() => setPendingImages([]));
+          }}
+          visible={pendingImages.length > 0}
+        />
       </View>
     </SafeAreaView>
   );

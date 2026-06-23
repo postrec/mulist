@@ -6,4 +6,5 @@ export type SettingsRoute =
   | 'sync'
   | 'developer'
   | 'feedback'
+  | 'logs'
   | 'version';
