@@ -138,7 +138,9 @@ interface DrawingToolbarProps {
   color: string;
   onColorSelect: (color: string) => void;
   onSelect: (tool: AnnotationTool | null) => void;
+  onWidthSelect: (width: number) => void;
   selected: AnnotationTool | null;
+  width: number;
 }
 
 const drawingColors = [
@@ -154,7 +156,9 @@ export function DrawingToolbar({
   color,
   onColorSelect,
   onSelect,
+  onWidthSelect,
   selected,
+  width,
 }: DrawingToolbarProps) {
   useAppLanguage();
   const tools = [
@@ -171,23 +175,48 @@ export function DrawingToolbar({
     },
   ];
   const canChooseColor = selected === 'pen' || selected === 'highlighter';
+  const widthOptions =
+    selected === 'highlighter'
+      ? ([10, 18, 28] as const)
+      : ([2, 3.5, 5] as const);
   return (
     <View style={styles.drawingToolbar}>
       {canChooseColor ? (
         <View style={styles.colorPalette}>
-          {drawingColors.map((item) => (
-            <Pressable
-              accessibilityLabel={`색상 ${item}`}
-              accessibilityRole="button"
-              key={item}
-              onPress={() => onColorSelect(item)}
-              style={[
-                styles.colorButton,
-                { backgroundColor: item },
-                color === item && styles.selectedColor,
-              ]}
-            />
-          ))}
+          <View style={styles.widthOptions}>
+            {widthOptions.map((item, index) => (
+              <Pressable
+                accessibilityLabel={`굵기 ${index + 1}단계`}
+                accessibilityRole="button"
+                key={item}
+                onPress={() => onWidthSelect(item)}
+                style={[
+                  styles.widthButton,
+                  width === item && styles.selectedWidthButton,
+                ]}
+              >
+                <View
+                  style={[styles.widthSample, { height: [2, 4, 7][index] }]}
+                />
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.optionDivider} />
+          <View style={styles.colorOptions}>
+            {drawingColors.map((item) => (
+              <Pressable
+                accessibilityLabel={`색상 ${item}`}
+                accessibilityRole="button"
+                key={item}
+                onPress={() => onColorSelect(item)}
+                style={[
+                  styles.colorButton,
+                  { backgroundColor: item },
+                  color === item && styles.selectedColor,
+                ]}
+              />
+            ))}
+          </View>
         </View>
       ) : null}
       {tools.map((tool) => (
@@ -285,12 +314,27 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     bottom: 140,
-    flexDirection: 'row',
     gap: 8,
     padding: 8,
     position: 'absolute',
     right: 0,
   },
+  widthOptions: { alignItems: 'center', gap: 4 },
+  widthButton: {
+    alignItems: 'center',
+    borderRadius: 7,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
+  },
+  selectedWidthButton: { backgroundColor: colors.primarySoft },
+  widthSample: {
+    backgroundColor: colors.text,
+    borderRadius: 4,
+    width: 22,
+  },
+  optionDivider: { backgroundColor: colors.border, height: 1, width: '100%' },
+  colorOptions: { alignItems: 'center', gap: 8 },
   colorButton: {
     borderColor: colors.surface,
     borderRadius: 12,

@@ -18,6 +18,7 @@ import type { PageLayout } from './ViewerControls';
 
 interface PdfJsViewerProps {
   drawingColor?: string;
+  drawingWidth?: number;
   fileUri: string;
   drawingTool?: DrawingTool | null;
   layout: PageLayout;
@@ -39,6 +40,7 @@ const emptyNoteLayer: NoteLayer = { strokes: [], texts: [], version: 2 };
 
 export function PdfJsViewer({
   drawingColor = '#C62828',
+  drawingWidth = 3.5,
   drawingTool = null,
   fileUri,
   layout,
@@ -61,6 +63,7 @@ export function PdfJsViewer({
   const initialZoom = useRef(zoom).current;
   const initialNoteLayer = useRef(noteLayer).current;
   const initialDrawingColor = useRef(drawingColor).current;
+  const initialDrawingWidth = useRef(drawingWidth).current;
   const initialPencilSmoothing = useRef(pencilSmoothing).current;
   const [assets, setAssets] = useState<PdfJsAssetUris | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +125,7 @@ export function PdfJsViewer({
             initialZoom,
             initialNoteLayer,
             initialDrawingColor,
+            initialDrawingWidth,
             initialPencilSmoothing,
             pdfBase64,
           })
@@ -134,6 +138,7 @@ export function PdfJsViewer({
       initialZoom,
       initialNoteLayer,
       initialDrawingColor,
+      initialDrawingWidth,
       initialPencilSmoothing,
       pdfBase64,
       restoredPage,
@@ -181,6 +186,13 @@ export function PdfJsViewer({
       `window.mulistPdf.setDrawingColor(${JSON.stringify(drawingColor)});true;`,
     );
   }, [drawingColor, isReady]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    webView.current?.injectJavaScript(
+      `window.mulistPdf.setDrawingWidth(${drawingWidth});true;`,
+    );
+  }, [drawingWidth, isReady]);
 
   useEffect(() => {
     if (!isReady) return;

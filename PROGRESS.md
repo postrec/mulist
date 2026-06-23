@@ -612,3 +612,15 @@
   document-length texture.
 - Preview transforms, transform origins, and temporary stacking layers are explicitly
   cleared before the single final layout/render commit.
+
+## 2026-06-23 — Drawing Color and Width Controls
+
+- Changed the Pen/Highlighter option panel to place six color swatches in a vertical
+  column instead of a horizontal row.
+- Added three visual width choices above the color column. Pen uses 2/3.5/5 and
+  Highlighter uses 10/18/28 page-relative width levels; each tool retains its own
+  selected width and color for the Viewer session.
+- Passed the selected width through the React Native–PDF.js bridge so every new stroke
+  persists its exact chosen width in the existing annotation sidecar.
+- Changed the three width choices to a vertical stack, matching the color swatches, so
+  the floating option panel reads top-to-bottom as widths, divider, then colors.

@@ -224,6 +224,9 @@
 - [x] Prevent Drawing-Mode Pinch Page Disappearance
 - [x] Configurable Apple Pencil Curve Smoothing (0–10)
 - [x] Pen and Highlighter Color Palette
+- [x] Vertical Drawing Color Palette
+- [x] Three-Level Pen and Highlighter Width Selection
+- [x] Vertical Drawing Width Controls
 - [x] Fixed Viewer Menu Bar without Horizontal Scrolling
 - [x] Hidden-Menu Page Tap Snap
 - [x] Hidden-Menu Margin Tap Reveal

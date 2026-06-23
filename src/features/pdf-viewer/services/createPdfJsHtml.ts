@@ -5,6 +5,7 @@ import type { PdfJsAssetUris } from './pdfJsAssets';
 interface PdfJsHtmlOptions extends PdfJsAssetUris {
   fileUri: string;
   initialDrawingColor: string;
+  initialDrawingWidth: number;
   initialLayout: PageLayout;
   initialNavigationMode: ScoreNavigationMode;
   initialNoteLayer: NoteLayer;
@@ -18,6 +19,7 @@ export function createPdfJsHtml(options: PdfJsHtmlOptions): string {
   const config = JSON.stringify({
     fileUri: options.fileUri,
     initialDrawingColor: options.initialDrawingColor,
+    initialDrawingWidth: options.initialDrawingWidth,
     initialLayout: options.initialLayout,
     initialNavigationMode: options.initialNavigationMode,
     initialNoteLayer: options.initialNoteLayer,
@@ -57,7 +59,7 @@ const send=message=>window.ReactNativeWebView?.postMessage(JSON.stringify(messag
 let pdfDocument=null,zoom=clamp(config.initialZoom),layout=config.initialLayout,navigationMode=config.initialNavigationMode;
 let currentPage=Math.max(1,config.initialPage),pageReportTimer=null,transitionRunning=false;
 let models=[],renderGeneration=0,renderTimer=null,pinch=null,snapTouch=null,tapTouch=null,lastSentZoom=-1,menuVisible=true,horizontalSnapTimer=null,horizontalSnapping=false;
-let drawingTool=null,drawingColor=config.initialDrawingColor??'#C62828',pencilSmoothing=Math.max(0,Math.min(10,config.initialPencilSmoothing??2)),pencilStroke=null,pencilPointerId=null,pencilModel=null,noteLayer=config.initialNoteLayer??{version:2,strokes:[],texts:[]};
+let drawingTool=null,drawingColor=config.initialDrawingColor??'#C62828',drawingWidth=Math.max(1,Math.min(40,config.initialDrawingWidth??3.5)),pencilSmoothing=Math.max(0,Math.min(10,config.initialPencilSmoothing??2)),pencilStroke=null,pencilPointerId=null,pencilModel=null,noteLayer=config.initialNoteLayer??{version:2,strokes:[],texts:[]};
 
 function isHorizontal(){return navigationMode==='snap-horizontal'||navigationMode==='snap-horizontal-page';}
 function modelAtPoint(x,y){
@@ -132,7 +134,7 @@ document.addEventListener('pointerdown',event=>{
   if(!pencilModel)return;
   const point=pagePoint(event,pencilModel);
   if(drawingTool==='eraser'){eraseAt(point,pencilModel);return;}
-  pencilStroke={color:drawingColor,id:'pencil-'+Date.now()+'-'+Math.random(),opacity:drawingTool==='highlighter'?0.35:1,page:pencilModel.number,points:[point],tool:drawingTool,width:drawingTool==='highlighter'?18:3};renderModelAnnotations(pencilModel);
+  pencilStroke={color:drawingColor,id:'pencil-'+Date.now()+'-'+Math.random(),opacity:drawingTool==='highlighter'?0.35:1,page:pencilModel.number,points:[point],tool:drawingTool,width:drawingWidth};renderModelAnnotations(pencilModel);
 },{capture:true,passive:false});
 document.addEventListener('pointermove',event=>{
   if(event.pointerType!=='pen'||event.pointerId!==pencilPointerId)return;
@@ -380,7 +382,7 @@ document.addEventListener('touchcancel',()=>{
 },{passive:true});
 window.addEventListener('resize',()=>{if(pinch)finishPinch();else{applySizing();scheduleRender();}});
 window.addEventListener('scroll',handleScroll,{passive:true});
-window.mulistPdf={setZoom,setLayout,setNavigationMode,scrollToPage,setMenuVisible:value=>{menuVisible=Boolean(value);},setDrawingTool:value=>{drawingTool=value==='pen'||value==='highlighter'||value==='eraser'?value:null;},setDrawingColor:value=>{if(typeof value==='string'&&/^#[0-9A-Fa-f]{6}$/.test(value))drawingColor=value;},setPencilSmoothing:value=>{if(Number.isFinite(value))pencilSmoothing=Math.max(0,Math.min(10,value));},setNoteLayer:value=>{if(value&&Array.isArray(value.strokes)&&Array.isArray(value.texts)){noteLayer=value;renderAnnotations();}}};
+window.mulistPdf={setZoom,setLayout,setNavigationMode,scrollToPage,setMenuVisible:value=>{menuVisible=Boolean(value);},setDrawingTool:value=>{drawingTool=value==='pen'||value==='highlighter'||value==='eraser'?value:null;},setDrawingColor:value=>{if(typeof value==='string'&&/^#[0-9A-Fa-f]{6}$/.test(value))drawingColor=value;},setDrawingWidth:value=>{if(Number.isFinite(value))drawingWidth=Math.max(1,Math.min(40,value));},setPencilSmoothing:value=>{if(Number.isFinite(value))pencilSmoothing=Math.max(0,Math.min(10,value));},setNoteLayer:value=>{if(value&&Array.isArray(value.strokes)&&Array.isArray(value.texts)){noteLayer=value;renderAnnotations();}}};
 
 void (async()=>{try{
   const pdfjs=pdfjsLib;

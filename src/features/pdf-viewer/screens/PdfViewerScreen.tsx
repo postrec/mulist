@@ -66,6 +66,8 @@ export function PdfViewerScreen({
   const [tool, setTool] = useState<AnnotationTool | null>(null);
   const [penColor, setPenColor] = useState('#C62828');
   const [highlighterColor, setHighlighterColor] = useState('#FFE066');
+  const [penWidth, setPenWidth] = useState(3.5);
+  const [highlighterWidth, setHighlighterWidth] = useState(18);
   const [layout, setLayout] = useState<PageLayout>('single');
   const [zoom, setZoom] = useState(() =>
     clampZoom(Math.round(settings.defaultZoom * 100)),
@@ -204,6 +206,7 @@ export function PdfViewerScreen({
         <View style={styles.viewerContainer}>
           <PdfJsViewer
             drawingColor={tool === 'highlighter' ? highlighterColor : penColor}
+            drawingWidth={tool === 'highlighter' ? highlighterWidth : penWidth}
             drawingTool={
               tool === 'pen' || tool === 'highlighter' || tool === 'eraser'
                 ? tool
@@ -244,7 +247,12 @@ export function PdfViewerScreen({
                 else setPenColor(color);
               }}
               onSelect={setTool}
+              onWidthSelect={(width) => {
+                if (tool === 'highlighter') setHighlighterWidth(width);
+                else setPenWidth(width);
+              }}
               selected={tool}
+              width={tool === 'highlighter' ? highlighterWidth : penWidth}
             />
           ) : null}
           {setlist && onSetlistSongSelect ? (
