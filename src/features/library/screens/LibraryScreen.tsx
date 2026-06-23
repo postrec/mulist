@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingBottom: 10,
   },
-  filterScroller: { flexGrow: 0 },
+  filterScroller: { flexGrow: 0, minHeight: 52 },
   tagFilters: {
     flexDirection: 'row',
     gap: 8,

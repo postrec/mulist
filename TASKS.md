@@ -25,6 +25,7 @@
 
 - [x] Song List Screen
 - [x] Compact Library Filter Row
+- [x] Library Filter Row Height and Text-Clipping Refinement
 - [x] MuList Home Branding
 - [x] iPad Portrait Two-Column Library
 - [x] Tag Presets and Alias IDs
@@ -139,6 +140,21 @@
   - [x] Open Full Viewer Action
 - [x] Viewer Setlist Quick Navigation
 - [x] Render Visible PDF Pages Plus Two-Page Buffer
+- [x] Priority PDF Render Pipeline (Current/Next, then Previous/Next-Two)
+  - [x] Preserve Existing Page Canvas until Replacement Render Completes
+  - [x] Restart Rendering only when Active Page Changes during Scroll
+  - [x] Deferred Low-Resolution Preview Rendering for All Remaining Pages
+  - [x] Developer Preview Quality Setting (10–100%)
+  - [x] Floating Toolbar Current/Total Page Indicator
+  - [x] iOS Horizontal Body/Document Scroll Page Tracking
+  - [x] Overlapping Two-Page Horizontal Snap Spreads (1–2, 2–3, 3–4)
+  - [x] Context-Aware Page Tap Navigation for Overlapping Spreads
+  - [x] Automatic Single-Page Navigation when Zoomed Two-Page Spread No Longer Fits
+  - [x] 48% Zoomed-Page Navigation Threshold
+  - [x] Dynamic Center Alignment for Single Pages and Two-Page Spreads
+  - [x] Vertical Pan Support in Horizontal Scroll and Snap Modes
+  - [x] Preserve Vertical Offset during Horizontal Snap Alignment
+- [x] PDF Loading Stage Timing Instrumentation
 - [x] Preload Next Setlist Songs through First Page
 - [x] Three-Song Setlist PDF.js LRU Cache
 
@@ -371,6 +387,7 @@
 
 - [x] 테스트 Song 생성
 - [x] 테스트 Setlist 생성
+- [x] PDF 저해상도 미리보기 품질 설정
 
 ---
 

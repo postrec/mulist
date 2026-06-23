@@ -11,6 +11,7 @@ interface PdfJsHtmlOptions extends PdfJsAssetUris {
   initialNoteLayer: NoteLayer;
   initialPencilSmoothing: number;
   initialPreloadOnly: boolean;
+  initialPreviewScale: number;
   initialPage: number;
   initialZoom: number;
   pdfBase64: string;
@@ -26,6 +27,7 @@ export function createPdfJsHtml(options: PdfJsHtmlOptions): string {
     initialNoteLayer: options.initialNoteLayer,
     initialPencilSmoothing: options.initialPencilSmoothing,
     initialPreloadOnly: options.initialPreloadOnly,
+    initialPreviewScale: options.initialPreviewScale,
     initialPage: options.initialPage,
     initialZoom: options.initialZoom,
     pdfBase64: options.pdfBase64,
@@ -42,7 +44,7 @@ html,body{margin:0;min-height:100%;background:#272927;color:#fff;font-family:-ap
 #pages.two-page{grid-template-columns:repeat(2,max-content)}
 #pages.snap-horizontal,#pages.snap-horizontal-page{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;justify-content:flex-start;height:100vh;min-height:100vh;width:max-content}
 #pages.two-page.snap-horizontal,#pages.two-page.snap-horizontal-page{gap:10px;padding-left:10vw;padding-right:10vw}
-.horizontal-scroll-mode{height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.horizontal-scroll-mode{height:100%;overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .page{background:#fff;box-shadow:0 2px 8px #0008;flex:0 0 auto;position:relative;overflow:hidden}
 .page canvas{display:block}
 .pdf-canvas{position:relative;z-index:0}
@@ -50,6 +52,7 @@ html,body{margin:0;min-height:100%;background:#272927;color:#fff;font-family:-ap
 #status{position:fixed;inset:0;display:grid;place-items:center;background:#272927;z-index:2;font-size:14px}
 </style></head><body><div id="status">PDF.js 준비 중…</div><main id="pages"></main>
 <script>
+window.__mulistPdfStartedAt=performance.now();
 window.addEventListener('error',event=>window.ReactNativeWebView?.postMessage(JSON.stringify({type:'diagnostic',message:'PDF.js 실행 진단: '+event.message})));
 window.addEventListener('unhandledrejection',event=>window.ReactNativeWebView?.postMessage(JSON.stringify({type:'diagnostic',message:'PDF.js 비동기 진단: '+(event.reason?.message??String(event.reason))})));
 </script><script>${workerCode}</script><script>${moduleCode}</script><script>
@@ -58,10 +61,13 @@ const pagesElement=document.getElementById('pages');
 const statusElement=document.getElementById('status');
 const clamp=value=>Math.max(25,Math.min(250,value));
 const send=message=>window.ReactNativeWebView?.postMessage(JSON.stringify(message));
+const reportPerformance=(stage,startedAt,detail)=>send({type:'performance',stage,durationMs:Math.round((performance.now()-startedAt)*10)/10,detail});
+reportPerformance('pdfjs_engine_bootstrap',window.__mulistPdfStartedAt);
 let pdfDocument=null,zoom=clamp(config.initialZoom),layout=config.initialLayout,navigationMode=config.initialNavigationMode;
 let currentPage=Math.max(1,config.initialPage),pageReportTimer=null,transitionRunning=false;
-let models=[],renderGeneration=0,renderTimer=null,pinch=null,snapTouch=null,tapTouch=null,lastSentZoom=-1,menuVisible=true,horizontalSnapTimer=null,horizontalSnapping=false;
+let models=[],renderGeneration=0,renderTimer=null,backgroundRenderTimer=null,scrollTrackingFrame=null,pinch=null,snapTouch=null,tapTouch=null,lastSentZoom=-1,menuVisible=true,horizontalSnapTimer=null,horizontalSnapping=false,lastHorizontalScroll=0;
 let preloadOnly=Boolean(config.initialPreloadOnly);
+let previewScale=Math.max(.1,Math.min(1,config.initialPreviewScale??.35));
 let drawingTool=null,drawingColor=config.initialDrawingColor??'#C62828',drawingWidth=Math.max(1,Math.min(40,config.initialDrawingWidth??3.5)),pencilSmoothing=Math.max(0,Math.min(10,config.initialPencilSmoothing??2)),pencilStroke=null,pencilPointerId=null,pencilModel=null,noteLayer=config.initialNoteLayer??{version:2,strokes:[],texts:[]};
 
 function isHorizontal(){return navigationMode==='snap-horizontal'||navigationMode==='snap-horizontal-page';}
@@ -177,6 +183,7 @@ function applySizing(redrawAnnotations=true){
     model.canvas.style.width=width+'px';model.canvas.style.height=height+'px';
     model.annotationCanvas.style.width=width+'px';model.annotationCanvas.style.height=height+'px';
   }
+  applyHorizontalPadding();
   applyPageVisibility();
   if(redrawAnnotations)renderAnnotations();
 }
@@ -198,7 +205,8 @@ function reportZoomValue(value=zoom){
   if(rounded!==lastSentZoom){lastSentZoom=rounded;send({type:'zoom',zoom:rounded});}
 }
 function scheduleRender(delay=160){
-  clearTimeout(renderTimer);renderTimer=setTimeout(()=>void renderAll(),delay);
+  clearTimeout(renderTimer);clearTimeout(backgroundRenderTimer);
+  renderTimer=setTimeout(()=>void renderPriorityPages(),delay);
 }
 function setZoom(next,render=true){
   zoom=clamp(next);applySizing(render);reportZoomValue();if(render)scheduleRender();
@@ -211,10 +219,52 @@ function setNavigationMode(next){
   if(next!=='scroll'&&next!=='snap'&&next!=='snap-horizontal'&&next!=='snap-horizontal-page')return;
   navigationMode=next;applySizing();requestAnimationFrame(()=>scrollToPage(currentPage));
 }
+function horizontalTwoPageFits(){
+  if(layout!=='two-page'||!isHorizontal())return true;
+  const model=models[0];if(!model)return true;
+  const pageWidth=pageWidthFor(model)*zoom/100;
+  return pageWidth<document.documentElement.clientWidth*.48;
+}
+function usesTwoPageSpread(){return layout==='two-page'&&horizontalTwoPageFits();}
+function usesOverlappingSpread(){return usesTwoPageSpread()&&navigationMode==='snap-horizontal-page';}
+function snapInsetFor(model){
+  const viewportWidth=document.documentElement.clientWidth,pageWidth=pageWidthFor(model)*zoom/100;
+  if(usesTwoPageSpread()){
+    const next=models[model.number]??model,nextWidth=pageWidthFor(next)*zoom/100;
+    return Math.max(12,(viewportWidth-pageWidth-nextWidth-10)/2);
+  }
+  if(model.number===1)return 12;
+  if(model.number===models.length)return Math.max(12,viewportWidth-pageWidth-12);
+  return Math.max(12,(viewportWidth-pageWidth)/2);
+}
+function applyHorizontalPadding(){
+  if(!isHorizontal()){pagesElement.style.paddingLeft='';pagesElement.style.paddingRight='';return;}
+  const first=models[0];
+  if(!first){pagesElement.style.paddingLeft='12px';pagesElement.style.paddingRight='12px';return;}
+  const inset=usesTwoPageSpread()?snapInsetFor(first):12;
+  pagesElement.style.paddingLeft=inset+'px';pagesElement.style.paddingRight=inset+'px';
+}
 function normalizePage(page){
-  let next=Math.max(1,Math.min(models.length,page));
-  if(layout==='two-page')next=next-(next-1)%2;
+  const last=usesOverlappingSpread()?Math.max(1,models.length-1):models.length;
+  let next=Math.max(1,Math.min(last,page));
+  if(usesTwoPageSpread()&&!usesOverlappingSpread())next=next-(next-1)%2;
   return next;
+}
+function horizontalScrollElement(){
+  const candidates=[document.body,document.scrollingElement,document.documentElement].filter((element,index,array)=>element&&array.indexOf(element)===index);
+  return candidates.find(element=>Math.abs(element.scrollLeft)>.5)??candidates.sort((left,right)=>(right.scrollWidth-right.clientWidth)-(left.scrollWidth-left.clientWidth))[0]??document.documentElement;
+}
+function horizontalScrollPosition(){
+  return Math.max(window.scrollX||0,document.body.scrollLeft||0,document.documentElement.scrollLeft||0,document.scrollingElement?.scrollLeft||0);
+}
+function verticalScrollPosition(){
+  return Math.max(window.scrollY||0,document.body.scrollTop||0,document.documentElement.scrollTop||0,document.scrollingElement?.scrollTop||0);
+}
+function scrollHorizontalTo(left,animated){
+  const target=Math.max(0,left),options={left:target,top:verticalScrollPosition(),behavior:animated?'smooth':'auto'};
+  const element=horizontalScrollElement();
+  element.scrollTo?.(options);
+  if(element===document.scrollingElement||element===document.documentElement)window.scrollTo(options);
 }
 function returnFromDrag(offset){
   pagesElement.style.transform='';
@@ -227,30 +277,37 @@ function returnFromDrag(offset){
 function scrollToPage(page,animated=false,dragOffset=0){
   const nextPage=normalizePage(page);
   currentPage=nextPage;
-  const element=models[currentPage-1]?.element;
-  if(!element)return;
+  const model=models[currentPage-1],element=model?.element;
+  if(!model||!element)return;
   if(isHorizontal()){
-    const inset=layout==='two-page'?document.documentElement.clientWidth*.1:12;
-    window.scrollTo({left:Math.max(0,element.offsetLeft-inset),top:0,behavior:animated?'smooth':'auto'});
+    const inset=snapInsetFor(model);
+    scrollHorizontalTo(element.offsetLeft-inset,animated);
     reportPage();
     return;
   }
   window.scrollTo({left:0,top:element.offsetTop-12,behavior:animated||navigationMode==='snap'?'smooth':'auto'});
 }
+function scrollToTappedPage(page){
+  if(!usesOverlappingSpread()){scrollToPage(page,true);return;}
+  if(page>=currentPage&&page<=currentPage+1)return;
+  scrollToPage(page>currentPage+1?page-1:page,true);
+}
 function reportPage(){
   clearTimeout(pageReportTimer);pageReportTimer=setTimeout(()=>send({type:'page',page:currentPage}),120);
 }
 function updateCurrentPage(){
-  if(models.length===0)return;
+  if(models.length===0)return false;
   const horizontal=isHorizontal();
   let best=models[0],distance=Infinity;
   for(const model of models){
-    const rect=model.element.getBoundingClientRect(),next=Math.abs(horizontal?rect.left:rect.top);
+    const rect=model.element.getBoundingClientRect(),position=horizontal?rect.left:rect.top,target=horizontal?snapInsetFor(model):12,next=Math.abs(position-target);
     if(next<distance){distance=next;best=model;}
   }
   let page=Number(best.element.dataset.page);
-  if(layout==='two-page')page=page-(page-1)%2;
-  if(page!==currentPage){currentPage=page;reportPage();}
+  if(usesOverlappingSpread())page=Math.min(page,Math.max(1,models.length-1));
+  else if(usesTwoPageSpread())page=page-(page-1)%2;
+  if(page===currentPage)return false;
+  currentPage=page;reportPage();return true;
 }
 function snapToNearest(){
   if(navigationMode!=='snap'||models.length===0)return;
@@ -265,36 +322,71 @@ function snapHorizontalToNearest(){
   setTimeout(()=>{horizontalSnapping=false;},360);
 }
 function handleScroll(){
-  updateCurrentPage();
+  const horizontalPosition=horizontalScrollPosition(),horizontalMoved=Math.abs(horizontalPosition-lastHorizontalScroll)>.5;
+  lastHorizontalScroll=horizontalPosition;
+  const pageChanged=updateCurrentPage();
   if(pinch)return;
-  scheduleRender(70);
-  if(navigationMode!=='snap-horizontal-page'||horizontalSnapping)return;
+  if(pageChanged)scheduleRender(35);
+  if(navigationMode!=='snap-horizontal-page'||horizontalSnapping||!horizontalMoved)return;
   clearTimeout(horizontalSnapTimer);
   horizontalSnapTimer=setTimeout(snapHorizontalToNearest,140);
 }
-async function renderAll(){
-  const generation=++renderGeneration;
-  const visible=models.filter(model=>{const rect=model.element.getBoundingClientRect();return rect.bottom>=0&&rect.top<=innerHeight&&rect.right>=0&&rect.left<=innerWidth;});
-  const visibleNumbers=visible.length>0?visible.map(model=>model.number):[currentPage];
-  const first=preloadOnly?1:Math.max(1,Math.min(...visibleNumbers)-2),last=preloadOnly?1:Math.min(models.length,Math.max(...visibleNumbers)+2);
-  for(const model of models){
+function queueScrollTracking(){
+  if(scrollTrackingFrame!==null)return;
+  scrollTrackingFrame=requestAnimationFrame(()=>{scrollTrackingFrame=null;handleScroll();});
+}
+function renderNumbers(values){
+  return [...new Set(values.filter(value=>value>=1&&value<=models.length))];
+}
+async function renderPdfModel(model,generation,quality='full'){
+  if(generation!==renderGeneration||!model)return;
+  if(model.renderedZoom===zoom&&model.renderedQuality===quality&&model.canvas.width>1)return;
+  model.task?.cancel();
+  const cssWidth=pageWidthFor(model)*zoom/100;
+  const pixelRatio=quality==='preview'?previewScale:Math.min(window.devicePixelRatio||1,2);
+  const viewport=model.page.getViewport({scale:cssWidth/model.originalWidth*pixelRatio});
+  const nextCanvas=document.createElement('canvas');
+  nextCanvas.className='pdf-canvas';nextCanvas.width=Math.floor(viewport.width);nextCanvas.height=Math.floor(viewport.height);
+  nextCanvas.style.width=cssWidth+'px';nextCanvas.style.height=cssWidth*model.ratio+'px';
+  const context=nextCanvas.getContext('2d',{alpha:false});
+  const task=model.page.render({canvas:nextCanvas,canvasContext:context,viewport});
+  model.task=task;
+  try{
+    await task.promise;
     if(generation!==renderGeneration)return;
-    if(model.number<first||model.number>last){
-      model.task?.cancel();model.task=null;model.renderedZoom=null;
-      if(model.canvas.width!==1||model.canvas.height!==1){model.canvas.width=1;model.canvas.height=1;}
-      continue;
-    }
-    if(model.renderedZoom===zoom&&model.canvas.width>1)continue;
-    model.task?.cancel();
-    const cssWidth=pageWidthFor(model)*zoom/100;
-    const pixelRatio=Math.min(window.devicePixelRatio||1,2);
-    const viewport=model.page.getViewport({scale:cssWidth/model.originalWidth*pixelRatio});
-    model.canvas.width=Math.floor(viewport.width);model.canvas.height=Math.floor(viewport.height);
-    model.canvas.style.width=cssWidth+'px';model.canvas.style.height=cssWidth*model.ratio+'px';
-    const context=model.canvas.getContext('2d',{alpha:false});
-    model.task=model.page.render({canvas:model.canvas,canvasContext:context,viewport});
-    try{await model.task.promise;model.renderedZoom=zoom;}catch(error){if(error?.name!=='RenderingCancelledException')throw error;}finally{model.task=null;}
+    model.canvas.replaceWith(nextCanvas);model.canvas=nextCanvas;model.renderedZoom=zoom;model.renderedQuality=quality;
+  }catch(error){
+    if(error?.name!=='RenderingCancelledException')throw error;
+  }finally{
+    if(model.task===task)model.task=null;
   }
+}
+async function renderRemainingPreviews(generation,anchor){
+  const priority=new Set(renderNumbers([anchor-1,anchor,anchor+1,anchor+2]));
+  const remaining=models.filter(model=>!priority.has(model.number)).sort((left,right)=>Math.abs(left.number-anchor)-Math.abs(right.number-anchor));
+  for(const model of remaining){
+    if(generation!==renderGeneration||anchor!==currentPage)return;
+    await renderPdfModel(model,generation,'preview');
+    await new Promise(resolve=>setTimeout(resolve,16));
+  }
+}
+async function renderBackgroundPages(generation,anchor){
+  if(generation!==renderGeneration||preloadOnly||anchor!==currentPage)return;
+  for(const number of renderNumbers([anchor-1,anchor+2])){
+    if(generation!==renderGeneration||anchor!==currentPage)return;
+    await renderPdfModel(models[number-1],generation);
+  }
+  await renderRemainingPreviews(generation,anchor);
+}
+async function renderPriorityPages(){
+  clearTimeout(backgroundRenderTimer);
+  const generation=++renderGeneration,anchor=preloadOnly?1:normalizePage(currentPage);
+  for(const number of renderNumbers(preloadOnly?[1]:[anchor,anchor+1])){
+    if(generation!==renderGeneration)return;
+    await renderPdfModel(models[number-1],generation);
+  }
+  if(generation!==renderGeneration||preloadOnly)return;
+  backgroundRenderTimer=setTimeout(()=>void renderBackgroundPages(generation,anchor),80);
 }
 function distance(touches){
   const x=touches[0].clientX-touches[1].clientX,y=touches[0].clientY-touches[1].clientY;
@@ -361,19 +453,21 @@ document.addEventListener('touchmove',event=>{
     const touch=event.touches[0],dx=touch.clientX-tapTouch.x,dy=touch.clientY-tapTouch.y;
     if(Math.abs(dx)>10||Math.abs(dy)>10)tapTouch=null;
   }
+  if(isHorizontal())queueScrollTracking();
   if(snapTouch&&event.touches.length===1&&navigationMode==='snap'&&!transitionRunning){
     const dx=event.touches[0].clientX-snapTouch.x,dy=event.touches[0].clientY-snapTouch.y;
     if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>=24)event.preventDefault();
   }
 },{passive:false});
 document.addEventListener('touchend',event=>{
+  if(isHorizontal())queueScrollTracking();
   if(pinch&&event.touches.length<2){finishPinch();tapTouch=null;snapTouch=null;return;}
   if(tapTouch&&event.changedTouches.length>0){
     const touch=event.changedTouches[0],dx=touch.clientX-tapTouch.x,dy=touch.clientY-tapTouch.y,elapsed=Date.now()-tapTouch.time;
     if(Math.abs(dx)<=10&&Math.abs(dy)<=10&&elapsed<300){
       const target=document.elementFromPoint(touch.clientX,touch.clientY),pageElement=target?.closest?.('.page');
       const page=pageElement?Number(pageElement.dataset.page):null;
-      if(!menuVisible&&page)scrollToPage(page,true);
+      if(!menuVisible&&page)scrollToTappedPage(page);
       send({type:'tap',page});
     }
     tapTouch=null;
@@ -394,30 +488,41 @@ document.addEventListener('touchcancel',()=>{
   finishPinch();
 },{passive:true});
 window.addEventListener('resize',()=>{if(pinch)finishPinch();else{applySizing();scheduleRender();}});
-window.addEventListener('scroll',handleScroll,{passive:true});
-window.mulistPdf={setZoom,setLayout,setNavigationMode,scrollToPage,setMenuVisible:value=>{menuVisible=Boolean(value);},setDrawingTool:value=>{drawingTool=value==='pen'||value==='highlighter'||value==='eraser'?value:null;},setDrawingColor:value=>{if(typeof value==='string'&&/^#[0-9A-Fa-f]{6}$/.test(value))drawingColor=value;},setDrawingWidth:value=>{if(Number.isFinite(value))drawingWidth=Math.max(1,Math.min(40,value));},setPencilSmoothing:value=>{if(Number.isFinite(value))pencilSmoothing=Math.max(0,Math.min(10,value));},setPreloadOnly:value=>{const next=Boolean(value);if(next===preloadOnly)return;preloadOnly=next;applySizing();scheduleRender(0);},setNoteLayer:value=>{if(value&&Array.isArray(value.strokes)&&Array.isArray(value.texts)){noteLayer=value;renderAnnotations();}}};
+window.addEventListener('scroll',queueScrollTracking,{passive:true});
+document.addEventListener('scroll',queueScrollTracking,{capture:true,passive:true});
+document.body.addEventListener('scroll',queueScrollTracking,{passive:true});
+window.mulistPdf={setZoom,setLayout,setNavigationMode,scrollToPage,setMenuVisible:value=>{menuVisible=Boolean(value);},setDrawingTool:value=>{drawingTool=value==='pen'||value==='highlighter'||value==='eraser'?value:null;},setDrawingColor:value=>{if(typeof value==='string'&&/^#[0-9A-Fa-f]{6}$/.test(value))drawingColor=value;},setDrawingWidth:value=>{if(Number.isFinite(value))drawingWidth=Math.max(1,Math.min(40,value));},setPencilSmoothing:value=>{if(Number.isFinite(value))pencilSmoothing=Math.max(0,Math.min(10,value));},setPreviewScale:value=>{if(!Number.isFinite(value))return;const next=Math.max(.1,Math.min(1,value));if(next===previewScale)return;previewScale=next;for(const model of models){if(model.renderedQuality==='preview')model.renderedZoom=null;}scheduleRender(0);},setPreloadOnly:value=>{const next=Boolean(value);if(next===preloadOnly)return;preloadOnly=next;applySizing();scheduleRender(0);},setNoteLayer:value=>{if(value&&Array.isArray(value.strokes)&&Array.isArray(value.texts)){noteLayer=value;renderAnnotations();}}};
 
 void (async()=>{try{
   const pdfjs=pdfjsLib;
   globalThis.Worker=undefined;
   statusElement.textContent='PDF 파일 여는 중…';
+  const decodeStartedAt=performance.now();
   const binary=atob(config.pdfBase64),pdfBytes=new Uint8Array(binary.length);
   for(let index=0;index<binary.length;index+=1)pdfBytes[index]=binary.charCodeAt(index);
   config.pdfBase64='';
+  reportPerformance('base64_decode',decodeStartedAt,'bytes='+pdfBytes.length);
+  const documentStartedAt=performance.now();
   const loadingTask=pdfjs.getDocument({data:pdfBytes});
   pdfDocument=await Promise.race([
     loadingTask.promise,
     new Promise((_,reject)=>setTimeout(()=>reject(new Error('PDF 파일 로딩 시간이 초과되었습니다.')),45000)),
   ]);
+  reportPerformance('pdf_document_parse',documentStartedAt,'pages='+pdfDocument.numPages);
+  const metadataStartedAt=performance.now();
   for(let number=1;number<=pdfDocument.numPages;number+=1){
     const page=await pdfDocument.getPage(number),viewport=page.getViewport({scale:1});
     const element=document.createElement('section'),canvas=document.createElement('canvas'),annotationCanvas=document.createElement('canvas');
     element.className='page';element.dataset.page=String(number);canvas.className='pdf-canvas';annotationCanvas.className='annotation-layer';element.append(canvas,annotationCanvas);pagesElement.append(element);
-    models.push({page,number,element,canvas,annotationCanvas,originalWidth:viewport.width,ratio:viewport.height/viewport.width,renderedZoom:null,task:null});
+    models.push({page,number,element,canvas,annotationCanvas,originalWidth:viewport.width,ratio:viewport.height/viewport.width,renderedZoom:null,renderedQuality:null,task:null});
   }
+  reportPerformance('all_page_metadata',metadataStartedAt,'pages='+pdfDocument.numPages);
   applySizing();statusElement.remove();reportZoomValue();
   send({type:'ready',pageCount:pdfDocument.numPages});
-  scrollToPage(currentPage);await renderAll();reportPage();
+  const renderStartedAt=performance.now();
+  scrollToPage(currentPage);await renderPriorityPages();reportPage();
+  reportPerformance('first_visible_render',renderStartedAt,'pages='+renderNumbers(preloadOnly?[1]:[currentPage,currentPage+1]).join(','));
+  reportPerformance('viewer_total_ready',window.__mulistPdfStartedAt,'pages='+pdfDocument.numPages);
 }catch(error){
   statusElement.textContent='PDF를 열지 못했습니다.';send({type:'error',message:error?.message??String(error)});
 }})();

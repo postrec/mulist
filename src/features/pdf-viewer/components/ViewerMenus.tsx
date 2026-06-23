@@ -129,11 +129,13 @@ export function HideMenuButton({ onPress }: { onPress: () => void }) {
 
 interface DrawingToolbarProps {
   color: string;
+  currentPage: number;
   onColorSelect: (color: string) => void;
   onHide: () => void;
   onSelect: (tool: AnnotationTool | null) => void;
   onWidthSelect: (width: number) => void;
   selected: AnnotationTool | null;
+  totalPages: number;
   width: number;
 }
 
@@ -148,11 +150,13 @@ const drawingColors = [
 
 export function DrawingToolbar({
   color,
+  currentPage,
   onColorSelect,
   onHide,
   onSelect,
   onWidthSelect,
   selected,
+  totalPages,
   width,
 }: DrawingToolbarProps) {
   useAppLanguage();
@@ -232,6 +236,12 @@ export function DrawingToolbar({
           />
         </Pressable>
       ))}
+      <Text
+        accessibilityLabel={`현재 ${currentPage}쪽, 전체 ${totalPages}쪽`}
+        style={styles.pageIndicator}
+      >
+        {currentPage} / {Math.max(currentPage, totalPages)}
+      </Text>
       <Pressable
         accessibilityLabel="그리기 도구 숨기기"
         accessibilityRole="button"
@@ -382,6 +392,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 2,
     width: 38,
+  },
+  pageIndicator: {
+    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    color: colors.muted,
+    fontSize: 10,
+    fontVariant: ['tabular-nums'],
+    fontWeight: '700',
+    paddingTop: 5,
+    textAlign: 'center',
   },
   showDrawingButton: {
     alignItems: 'center',

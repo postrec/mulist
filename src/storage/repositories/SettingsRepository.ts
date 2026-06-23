@@ -25,6 +25,7 @@ export class SettingsRepository {
         defaultNavigationMode: normalizeNavigationMode(
           saved.defaultNavigationMode,
         ),
+        pdfPreviewScale: normalizePdfPreviewScale(saved.pdfPreviewScale),
       };
     } catch {
       return defaultAppSettings;
@@ -45,6 +46,13 @@ function normalizePencilSmoothing(value: number | undefined): number {
     return defaultAppSettings.applePencilSmoothing;
   }
   return Math.max(0, Math.min(10, Math.round(value)));
+}
+
+function normalizePdfPreviewScale(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return defaultAppSettings.pdfPreviewScale;
+  }
+  return Math.max(0.1, Math.min(1, Math.round(value * 20) / 20));
 }
 
 function normalizeNavigationMode(

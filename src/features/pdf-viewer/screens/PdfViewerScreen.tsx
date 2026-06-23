@@ -98,6 +98,7 @@ export function PdfViewerScreen({
   const [navigationMode, setNavigationMode] =
     useState<ScoreNavigationMode>('scroll');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [isMenuVisible, setIsMenuVisible] = useState(true);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDrawingToolbarVisible, setIsDrawingToolbarVisible] = useState(true);
@@ -106,6 +107,7 @@ export function PdfViewerScreen({
   useEffect(() => {
     setIsViewStateReady(false);
     setTool(null);
+    setTotalPages(0);
     setIsDrawingToolbarVisible(true);
     setIsViewOpen(false);
   }, [song.id]);
@@ -151,9 +153,6 @@ export function PdfViewerScreen({
       setIsMenuVisible(false);
     } else if (page === null) {
       setIsMenuVisible(true);
-    } else {
-      setCurrentPage(page);
-      updateViewState({ currentPage: page });
     }
   };
 
@@ -267,6 +266,7 @@ export function PdfViewerScreen({
                     void viewer.saveNoteLayer(noteLayer);
                 }}
                 onPageChange={isActive ? handlePageChange : doNothing}
+                onPageCountChange={isActive ? setTotalPages : undefined}
                 onTap={isActive ? handleViewerTap : doNothing}
                 onZoomChange={
                   isActive
@@ -275,6 +275,7 @@ export function PdfViewerScreen({
                 }
                 pencilSmoothing={settings.applePencilSmoothing}
                 preloadOnly={!isActive}
+                previewScale={settings.pdfPreviewScale}
                 zoom={isActive ? zoom : 100}
               />
             );
@@ -282,6 +283,7 @@ export function PdfViewerScreen({
           {isDrawingToolbarVisible ? (
             <DrawingToolbar
               color={tool === 'highlighter' ? highlighterColor : penColor}
+              currentPage={currentPage}
               onColorSelect={(color) => {
                 if (tool === 'highlighter') setHighlighterColor(color);
                 else setPenColor(color);
@@ -296,6 +298,7 @@ export function PdfViewerScreen({
                 else setPenWidth(width);
               }}
               selected={tool}
+              totalPages={totalPages}
               width={tool === 'highlighter' ? highlighterWidth : penWidth}
             />
           ) : (

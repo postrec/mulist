@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Slider from '@react-native-community/slider';
 import {
   Alert,
   Pressable,
@@ -53,6 +54,33 @@ export function DeveloperSettingsScreen() {
       </View>
       {settings.developerMode ? (
         <>
+          <ToolSection title="PDF Viewer">
+            <Text style={styles.settingTitle}>
+              {t('developer.pdfPreviewScale')} ·{' '}
+              {Math.round(settings.pdfPreviewScale * 100)}%
+            </Text>
+            <Text style={styles.detail}>
+              {t('developer.pdfPreviewScaleDescription')}
+            </Text>
+            <View style={styles.sliderRow}>
+              <Text style={styles.sliderEdge}>10%</Text>
+              <Slider
+                accessibilityLabel={t('developer.pdfPreviewScale')}
+                maximumTrackTintColor="#B8BDB9"
+                maximumValue={1}
+                minimumTrackTintColor="#4C8A6F"
+                minimumValue={0.1}
+                onSlidingComplete={(pdfPreviewScale) =>
+                  void update({ pdfPreviewScale })
+                }
+                step={0.05}
+                style={styles.slider}
+                thumbTintColor="#285C46"
+                value={settings.pdfPreviewScale}
+              />
+              <Text style={styles.sliderEdge}>100%</Text>
+            </View>
+          </ToolSection>
           <ToolSection title={t('developer.ocr')}>
             <ToolButton
               label={t('developer.rerunOcr')}
@@ -224,6 +252,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     margin: 7,
   },
+  settingTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  sliderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 12,
+  },
+  slider: { flex: 1, height: 36 },
+  sliderEdge: { color: colors.muted, fontSize: 11, width: 38 },
   button: {
     borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,

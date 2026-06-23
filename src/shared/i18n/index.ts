@@ -55,6 +55,8 @@ type TranslationKey =
   | 'developer.loadingError'
   | 'developer.ocr'
   | 'developer.packageUsage'
+  | 'developer.pdfPreviewScale'
+  | 'developer.pdfPreviewScaleDescription'
   | 'developer.resetConfirmBody'
   | 'developer.resetConfirmTitle'
   | 'developer.resetDatabase'
@@ -244,6 +246,9 @@ const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
     'developer.loadingError': '작업에 실패했습니다.',
     'developer.ocr': 'OCR',
     'developer.packageUsage': 'Song Package / 사용량 보기',
+    'developer.pdfPreviewScale': 'PDF 저해상도 미리보기 품질',
+    'developer.pdfPreviewScaleDescription':
+      '우선 렌더 범위 밖 페이지에 사용할 해상도입니다. 높을수록 선명하지만 메모리와 렌더 시간이 증가합니다.',
     'developer.resetConfirmBody': '모든 Song과 Setlist를 삭제합니다.',
     'developer.resetConfirmTitle': 'Database 초기화',
     'developer.resetDatabase': 'Database 초기화',
@@ -438,6 +443,9 @@ const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
     'developer.loadingError': 'Operation failed.',
     'developer.ocr': 'OCR',
     'developer.packageUsage': 'Song Package / Storage Usage',
+    'developer.pdfPreviewScale': 'PDF preview quality',
+    'developer.pdfPreviewScaleDescription':
+      'Resolution used for pages outside the priority render range. Higher values are sharper but use more memory and rendering time.',
     'developer.resetConfirmBody': 'This will delete all songs and setlists.',
     'developer.resetConfirmTitle': 'Reset Database',
     'developer.resetDatabase': 'Reset Database',
@@ -627,6 +635,9 @@ const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
     'developer.loadingError': '処理に失敗しました。',
     'developer.ocr': 'OCR',
     'developer.packageUsage': 'Song Package / 使用量を見る',
+    'developer.pdfPreviewScale': 'PDF低解像度プレビュー品質',
+    'developer.pdfPreviewScaleDescription':
+      '優先レンダリング範囲外のページに使う解像度です。高いほど鮮明ですが、メモリと描画時間が増えます。',
     'developer.resetConfirmBody': 'すべてのSongとSetlistを削除します。',
     'developer.resetConfirmTitle': 'Databaseを初期化',
     'developer.resetDatabase': 'Databaseを初期化',

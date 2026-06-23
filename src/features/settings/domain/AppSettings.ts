@@ -28,6 +28,7 @@ export interface AppSettings {
   fontSize: FontSizePreference;
   landscapeLock: boolean;
   language: AppLanguage;
+  pdfPreviewScale: number;
   theme: ThemePreference;
   wifiOnlySync: boolean;
 }
@@ -43,6 +44,7 @@ export const defaultAppSettings: AppSettings = {
   fontSize: 'medium',
   landscapeLock: false,
   language: detectAppLanguage(),
+  pdfPreviewScale: 0.35,
   theme: 'system',
   wifiOnlySync: true,
 };

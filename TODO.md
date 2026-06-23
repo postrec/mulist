@@ -82,6 +82,33 @@
 
 ## PDF Viewer Device Verification
 
+- [ ] Compare the new priority renderer on the target iPad: confirm current/+1 appear
+      first, -1/+2 fill afterward, and rapid scrolling cancels stale background work
+      without leaving a persistent blank page. Also confirm the previous canvas remains
+      visible until its replacement is complete during scrolling, and all remaining
+      pages eventually receive a low-resolution preview without interaction lag.
+- [ ] Tune Developer Mode's PDF preview quality on the target iPad (start at 35%) and
+      compare legibility, full-document preview completion time, and memory use on a
+      long score before changing the production default.
+- [ ] Verify on the target iPad that two-page horizontal scrolling advances the toolbar
+      page indicator through overlapping spreads (1, 2, 3...) during both drag and
+      momentum scrolling, snaps to centered pairs (1–2, 2–3, 3–4...), and upgrades
+      each newly active pair to full resolution.
+- [ ] Verify overlapping-spread page taps on iPad: from 1–2 tap 3 → 2–3, within 2–3
+      tap 3 → no movement, and from 3–4 tap 2 → 2–3.
+- [ ] Verify that two-page horizontal navigation changes to one-page steps immediately
+      at the 48%-of-parent page-width threshold and returns to overlapping two-page
+      spreads after zooming back down, without unexpected page jumps. Confirm middle
+      single pages and every two-page spread are visually centered.
+- [ ] On iPad, zoom a page beyond the viewport in both horizontal scroll and horizontal
+      snap modes; verify vertical panning reaches the bottom without causing horizontal
+      re-snapping, changing the current page, or jumping back to the top when a pending
+      horizontal snap finishes.
+
+- [ ] Capture `[PDF 성능]` profiles from at least one short PDF, one long PDF, and one
+      Setlist PRELOAD on the target iPad, then compare native file read, PDF parse,
+      all-page metadata, and first-render times before choosing the next optimization.
+
 - [x] Verify `TwoPageRight` on the target 11-inch iPad. iOS WebKit ignored it, so it
       was replaced with two side-by-side PDF page views.
 - [x] Remove the temporary side-by-side WebViews. They did not satisfy the requirement
