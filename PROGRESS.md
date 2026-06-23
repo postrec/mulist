@@ -624,3 +624,11 @@
   persists its exact chosen width in the existing annotation sidecar.
 - Changed the three width choices to a vertical stack, matching the color swatches, so
   the floating option panel reads top-to-bottom as widths, divider, then colors.
+
+## 2026-06-23 — Always-Available Drawing Toolbar
+
+- Removed the Drawing action from the Viewer header and made the floating Pen,
+  Highlighter, and Eraser toolbar visible by default whenever a score opens.
+- Added a compact chevron control at the bottom of the toolbar. Hiding it also clears
+  the active drawing tool to prevent accidental marks; a small persistent Pen button
+  remains in the same corner to restore the full toolbar.

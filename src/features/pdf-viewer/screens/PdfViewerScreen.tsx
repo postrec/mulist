@@ -32,6 +32,7 @@ import type { PageLayout } from '../components/ViewerControls';
 import {
   DrawingToolbar,
   HideMenuButton,
+  ShowDrawingToolbarButton,
   ShowMenuButton,
   ViewerMenuBar,
 } from '../components/ViewerMenus';
@@ -78,13 +79,13 @@ export function PdfViewerScreen({
   const [currentPage, setCurrentPage] = useState(1);
   const [isMenuVisible, setIsMenuVisible] = useState(true);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isDrawingOpen, setIsDrawingOpen] = useState(false);
+  const [isDrawingToolbarVisible, setIsDrawingToolbarVisible] = useState(true);
   const [isViewStateReady, setIsViewStateReady] = useState(false);
 
   useEffect(() => {
     setIsViewStateReady(false);
     setTool(null);
-    setIsDrawingOpen(false);
+    setIsDrawingToolbarVisible(true);
     setIsViewOpen(false);
   }, [song.id]);
 
@@ -147,7 +148,6 @@ export function PdfViewerScreen({
           </View>
           <View style={[styles.controlsScroller, styles.controls]}>
             <ViewerMenuBar
-              drawingOpen={isDrawingOpen}
               layout={layout}
               navigationMode={navigationMode}
               onCloseView={() => setIsViewOpen(false)}
@@ -162,18 +162,7 @@ export function PdfViewerScreen({
                 updateViewState({ navigationMode: next });
               }}
               onOpenSettings={() => setIsSettingsOpen(true)}
-              onToggleDrawing={() => {
-                setIsDrawingOpen((current) => {
-                  if (current) setTool(null);
-                  return !current;
-                });
-                setIsViewOpen(false);
-              }}
-              onToggleView={() => {
-                setIsViewOpen((current) => !current);
-                setIsDrawingOpen(false);
-                setTool(null);
-              }}
+              onToggleView={() => setIsViewOpen((current) => !current)}
               onZoomIn={() =>
                 setZoom((current) => clampZoom(current + ZOOM_STEP))
               }
@@ -239,12 +228,16 @@ export function PdfViewerScreen({
             pencilSmoothing={settings.applePencilSmoothing}
             zoom={zoom}
           />
-          {isDrawingOpen ? (
+          {isDrawingToolbarVisible ? (
             <DrawingToolbar
               color={tool === 'highlighter' ? highlighterColor : penColor}
               onColorSelect={(color) => {
                 if (tool === 'highlighter') setHighlighterColor(color);
                 else setPenColor(color);
+              }}
+              onHide={() => {
+                setIsDrawingToolbarVisible(false);
+                setTool(null);
               }}
               onSelect={setTool}
               onWidthSelect={(width) => {
@@ -254,7 +247,11 @@ export function PdfViewerScreen({
               selected={tool}
               width={tool === 'highlighter' ? highlighterWidth : penWidth}
             />
-          ) : null}
+          ) : (
+            <ShowDrawingToolbarButton
+              onPress={() => setIsDrawingToolbarVisible(true)}
+            />
+          )}
           {setlist && onSetlistSongSelect ? (
             <SetlistQuickPanel
               currentSongId={song.id}

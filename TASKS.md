@@ -101,7 +101,7 @@
   - [x] Adjacent Page Swipe Preview
   - [x] Scroll Snap Navigation Mode
   - [x] Separate Vertical/Horizontal Scroll and Snap Modes
-- [x] Drawing Menu and Floating Toolbar
+- [x] Always-Visible Floating Drawing Toolbar
 - [x] Remove Count In
 
 # OCR
@@ -227,6 +227,7 @@
 - [x] Vertical Drawing Color Palette
 - [x] Three-Level Pen and Highlighter Width Selection
 - [x] Vertical Drawing Width Controls
+- [x] Compact Drawing Toolbar Hide and Restore Controls
 - [x] Fixed Viewer Menu Bar without Horizontal Scrolling
 - [x] Hidden-Menu Page Tap Snap
 - [x] Hidden-Menu Margin Tap Reveal

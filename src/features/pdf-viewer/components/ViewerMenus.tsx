@@ -17,14 +17,12 @@ import type { AnnotationTool } from './AnnotationCanvas';
 import type { PageLayout } from './ViewerControls';
 
 interface ViewerMenuBarProps {
-  drawingOpen: boolean;
   layout: PageLayout;
   navigationMode: ScoreNavigationMode;
   onCloseView: () => void;
   onLayoutChange: (layout: PageLayout) => void;
   onNavigationChange: (mode: ScoreNavigationMode) => void;
   onOpenSettings: () => void;
-  onToggleDrawing: () => void;
   onToggleView: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -51,11 +49,6 @@ export function ViewerMenuBar(props: ViewerMenuBarProps) {
       <View ref={viewButton}>
         <MenuButton label={t('viewer.view')} onPress={toggleView} />
       </View>
-      <MenuButton
-        active={props.drawingOpen}
-        label={t('viewer.drawing')}
-        onPress={props.onToggleDrawing}
-      />
       <MenuButton
         label={t('viewer.scoreSettings')}
         onPress={props.onOpenSettings}
@@ -137,6 +130,7 @@ export function HideMenuButton({ onPress }: { onPress: () => void }) {
 interface DrawingToolbarProps {
   color: string;
   onColorSelect: (color: string) => void;
+  onHide: () => void;
   onSelect: (tool: AnnotationTool | null) => void;
   onWidthSelect: (width: number) => void;
   selected: AnnotationTool | null;
@@ -155,6 +149,7 @@ const drawingColors = [
 export function DrawingToolbar({
   color,
   onColorSelect,
+  onHide,
   onSelect,
   onWidthSelect,
   selected,
@@ -237,7 +232,28 @@ export function DrawingToolbar({
           />
         </Pressable>
       ))}
+      <Pressable
+        accessibilityLabel="그리기 도구 숨기기"
+        accessibilityRole="button"
+        onPress={onHide}
+        style={styles.hideDrawingButton}
+      >
+        <FontAwesome5 color={colors.muted} name="chevron-down" size={10} />
+      </Pressable>
     </View>
+  );
+}
+
+export function ShowDrawingToolbarButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityLabel="그리기 도구 표시"
+      accessibilityRole="button"
+      onPress={onPress}
+      style={styles.showDrawingButton}
+    >
+      <FontAwesome5 color={colors.text} name="pen" size={14} />
+    </Pressable>
   );
 }
 
@@ -319,7 +335,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
   },
-  widthOptions: { alignItems: 'center', gap: 4 },
+  widthOptions: {
+    alignItems: 'center',
+    flexDirection: 'column',
+    gap: 4,
+    width: 30,
+  },
   widthButton: {
     alignItems: 'center',
     borderRadius: 7,
@@ -352,6 +373,29 @@ const styles = StyleSheet.create({
     height: 38,
     justifyContent: 'center',
     width: 38,
+  },
+  hideDrawingButton: {
+    alignItems: 'center',
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    height: 20,
+    justifyContent: 'center',
+    marginTop: 2,
+    width: 38,
+  },
+  showDrawingButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 9,
+    borderWidth: 1,
+    bottom: 20,
+    height: 30,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 16,
+    width: 30,
+    zIndex: 20,
   },
   showMenu: {
     backgroundColor: colors.surface,
