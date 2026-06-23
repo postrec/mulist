@@ -600,3 +600,15 @@
   once, restores the anchored page coordinate through one scroll correction, and then
   performs a single sharp PDF/annotation render. Page and snap calculations remain
   suspended until the commit is complete.
+
+## 2026-06-23 — Bounded Pinch Compositing with Annotations
+
+- Device feedback showed that compositing the complete multi-page document as one GPU
+  layer could exceed iPad WebKit texture limits when page annotation canvases were
+  active, causing the PDF layer to disappear during a finger pinch.
+- Pinch preview now selects only the visible and immediately adjacent pages, capped at
+  eight, and applies the same global focal-point matrix to each page independently.
+  This preserves spread spacing and annotation alignment without allocating one
+  document-length texture.
+- Preview transforms, transform origins, and temporary stacking layers are explicitly
+  cleared before the single final layout/render commit.
