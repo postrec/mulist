@@ -84,11 +84,27 @@ function isPdf(bytes: Uint8Array) {
 }
 function getFileName(header: string | null) {
   if (!header) return null;
-  const encoded = header.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
-  const plain = header.match(/filename="?([^";]+)"?/i)?.[1];
-  const value = encoded ? decodeURIComponent(encoded) : plain;
+  const encoded = header.match(/filename\*\s*=\s*UTF-8'[^']*'("?[^";]+"?)/i)?.[1]?.replace(/^"|"$/g, '');
+  const plain = header.match(/filename\s*=\s*"([^"]+)"/i)?.[1] ?? header.match(/filename\s*=\s*([^;]+)/i)?.[1]?.trim();
+  const value = encoded ? safeDecodeUri(encoded) : decodeMimeFileName(plain);
   if (!value) return null;
-  const safe = value.replace(/[\\/:*?"<>|]/g, '_').trim();
+  const safe = repairUtf8Mojibake(value).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim();
   return safe.toLowerCase().endsWith('.pdf') ? safe : `${safe}.pdf`;
+}
+function safeDecodeUri(value: string) {
+  try { return decodeURIComponent(value); } catch { return value; }
+}
+function decodeMimeFileName(value?: string) {
+  if (!value) return null;
+  const base64 = value.match(/^=\?UTF-8\?B\?([^?]+)\?=$/i)?.[1];
+  if (base64) return Buffer.from(base64, 'base64').toString('utf8');
+  const quoted = value.match(/^=\?UTF-8\?Q\?([^?]+)\?=$/i)?.[1];
+  if (quoted) return Buffer.from(quoted.replace(/_/g, ' ').replace(/=([0-9A-F]{2})/gi, '%$1').split('%').map((part,index)=>index===0?part:String.fromCharCode(Number.parseInt(part.slice(0,2),16))+part.slice(2)).join(''), 'binary').toString('utf8');
+  return value.includes('%') ? safeDecodeUri(value) : value;
+}
+function repairUtf8Mojibake(value: string) {
+  if (!/[\u0080-\u009f]|Ã|Â|ì|ë|ê/.test(value)) return value;
+  const repaired = Buffer.from(value, 'latin1').toString('utf8');
+  return repaired.includes('\uFFFD') ? value : repaired;
 }
 function error(message: string, status: number) { return NextResponse.json({ error: message }, { status }); }
