@@ -27,6 +27,9 @@
       stabilized focal-point-preserving pinch zoom with real multi-page PDFs on the target iPad.
       Legacy version 1 strokes have no page identity and intentionally fall back to
       page 1; new version 2 strokes persist their page number.
+- [ ] Device-test GPU preview pinch zoom in all four navigation modes and both page
+      layouts, paying particular attention to the final commit at the 25% and 250%
+      limits and centroids located in the gap between a two-page spread.
 - [ ] Tune the default Apple Pencil smoothing value after comparing levels 0, 2, 5,
       and 10 with real handwriting on the target iPad. The current default is 2.
 - [ ] Decide whether users can create and edit custom tag presets. The MVP currently

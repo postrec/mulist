@@ -220,6 +220,7 @@
 - [x] Font Awesome Drawing Tool Icons
 - [x] Pinch Zoom Focal-Point Preservation
 - [x] Pinch Zoom Value Stabilization
+- [x] GPU Preview Pinch Zoom with Single Commit Rendering
 - [x] Configurable Apple Pencil Curve Smoothing (0–10)
 - [x] Pen and Highlighter Color Palette
 - [x] Fixed Viewer Menu Bar without Horizontal Scrolling

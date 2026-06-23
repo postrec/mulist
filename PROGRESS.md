@@ -586,3 +586,17 @@
 - Sharing now checks the Song sync state. Pending or failed Songs upload automatically
   before the three-day link is created, while already-synced Songs skip the redundant
   package upload.
+
+## 2026-06-23 — GPU Preview Pinch Zoom
+
+- Replaced per-touch PDF page resizing with a two-phase pinch pipeline. During the
+  gesture, the complete PDF.js page tree—including annotation canvases—uses one
+  GPU-backed `translate3d + scale` transform and performs no document reflow or canvas
+  rendering.
+- Pinch updates are coalesced to one `requestAnimationFrame`, track both scale and
+  centroid movement directly, and keep the original content point beneath the moving
+  two-finger center.
+- On gesture completion, MuList clears the preview transform, commits the final zoom
+  once, restores the anchored page coordinate through one scroll correction, and then
+  performs a single sharp PDF/annotation render. Page and snap calculations remain
+  suspended until the commit is complete.

@@ -33,7 +33,7 @@ export function createPdfJsHtml(options: PdfJsHtmlOptions): string {
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
 html,body{margin:0;min-height:100%;background:#272927;color:#fff;font-family:-apple-system,sans-serif;overscroll-behavior:none}
-#pages{display:grid;gap:12px;padding:12px;justify-content:center;align-items:start;box-sizing:border-box;min-height:100vh;min-width:100%;width:max-content}
+#pages{display:grid;gap:12px;padding:12px;justify-content:center;align-items:start;box-sizing:border-box;min-height:100vh;min-width:100%;transform-origin:0 0;width:max-content}
 #pages.single{grid-template-columns:max-content}
 #pages.two-page{grid-template-columns:repeat(2,max-content)}
 #pages.snap-horizontal,#pages.snap-horizontal-page{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;justify-content:flex-start;height:100vh;min-height:100vh;width:max-content}
@@ -63,6 +63,15 @@ function isHorizontal(){return navigationMode==='snap-horizontal'||navigationMod
 function modelAtPoint(x,y){
   const pageElement=document.elementFromPoint(x,y)?.closest?.('.page');
   return pageElement?models.find(model=>model.element===pageElement)??null:null;
+}
+function nearestModelAtPoint(x,y){
+  const direct=modelAtPoint(x,y);if(direct)return direct;
+  let nearest=models[0]??null,distance=Infinity;
+  for(const model of models){
+    const rect=model.element.getBoundingClientRect(),closestX=Math.max(rect.left,Math.min(x,rect.right)),closestY=Math.max(rect.top,Math.min(y,rect.bottom)),next=Math.hypot(x-closestX,y-closestY);
+    if(next<distance){distance=next;nearest=model;}
+  }
+  return nearest;
 }
 function pagePoint(event,model){
   const rect=model.element.getBoundingClientRect();
@@ -119,7 +128,7 @@ function eraseAt(point,model){
 }
 document.addEventListener('pointerdown',event=>{
   if(!drawingTool||event.pointerType!=='pen')return;
-  event.preventDefault();event.stopPropagation();pinch=null;snapTouch=null;tapTouch=null;event.target?.setPointerCapture?.(event.pointerId);pencilPointerId=event.pointerId;pencilModel=modelAtPoint(event.clientX,event.clientY);
+  event.preventDefault();event.stopPropagation();finishPinch();snapTouch=null;tapTouch=null;event.target?.setPointerCapture?.(event.pointerId);pencilPointerId=event.pointerId;pencilModel=modelAtPoint(event.clientX,event.clientY);
   if(!pencilModel)return;
   const point=pagePoint(event,pencilModel);
   if(drawingTool==='eraser'){eraseAt(point,pencilModel);return;}
@@ -179,15 +188,15 @@ function applyPageVisibility(){
     model.element.style.top='';model.element.style.transform='';
   }
 }
-function reportZoom(){
-  const rounded=Math.round(zoom);
+function reportZoomValue(value=zoom){
+  const rounded=Math.round(value);
   if(rounded!==lastSentZoom){lastSentZoom=rounded;send({type:'zoom',zoom:rounded});}
 }
 function scheduleRender(delay=160){
   clearTimeout(renderTimer);renderTimer=setTimeout(()=>void renderAll(),delay);
 }
 function setZoom(next,render=true){
-  zoom=clamp(next);applySizing(render);reportZoom();if(render)scheduleRender();
+  zoom=clamp(next);applySizing(render);reportZoomValue();if(render)scheduleRender();
 }
 function setLayout(next){
   if(next!=='single'&&next!=='two-page')return;
@@ -278,22 +287,38 @@ function distance(touches){
 }
 function touchCenter(touches){return {x:(touches[0].clientX+touches[1].clientX)/2,y:(touches[0].clientY+touches[1].clientY)/2};}
 function beginPinch(touches){
-  const center=touchCenter(touches),model=modelAtPoint(center.x,center.y),rect=model?.element.getBoundingClientRect();
-  return {anchorX:rect?(center.x-rect.left)/rect.width:null,anchorY:rect?(center.y-rect.top)/rect.height:null,center,distance:distance(touches),lastZoom:zoom,modelNumber:model?.number??null,scrollX:window.scrollX,scrollY:window.scrollY,zoom};
+  pagesElement.getAnimations?.().forEach(animation=>animation.cancel());pagesElement.style.transform='';
+  const center=touchCenter(touches),model=nearestModelAtPoint(center.x,center.y),rect=model?.element.getBoundingClientRect(),pagesRect=pagesElement.getBoundingClientRect();
+  pagesElement.style.willChange='transform';
+  return {anchorX:rect?(center.x-rect.left)/rect.width:null,anchorY:rect?(center.y-rect.top)/rect.height:null,center,distance:Math.max(1,distance(touches)),frame:null,modelNumber:model?.number??null,pagesLeft:pagesRect.left,pagesTop:pagesRect.top,pendingCenter:center,pendingZoom:zoom,previewZoom:zoom,scrollX:window.scrollX,scrollY:window.scrollY,zoom};
+}
+function renderPinchPreview(){
+  if(!pinch)return;pinch.frame=null;
+  const scale=pinch.pendingZoom/pinch.zoom,translateX=pinch.pendingCenter.x-pinch.pagesLeft-(pinch.center.x-pinch.pagesLeft)*scale,translateY=pinch.pendingCenter.y-pinch.pagesTop-(pinch.center.y-pinch.pagesTop)*scale;
+  pagesElement.style.transform='translate3d('+translateX+'px,'+translateY+'px,0) scale('+scale+')';
+  pinch.previewZoom=pinch.pendingZoom;reportZoomValue(pinch.previewZoom);
 }
 function applyPinch(touches){
-  const center=touchCenter(touches),targetZoom=clamp(pinch.zoom*distance(touches)/pinch.distance),delta=Math.max(-6,Math.min(6,targetZoom-pinch.lastZoom));
-  if(Math.abs(delta)<.08)return;
-  const nextZoom=clamp(pinch.lastZoom+delta*.55);pinch.lastZoom=nextZoom;
-  setZoom(nextZoom,false);
-  const model=models.find(item=>item.number===pinch.modelNumber);
-  if(model&&pinch.anchorX!==null&&pinch.anchorY!==null){
+  if(!pinch)return;
+  const targetZoom=clamp(pinch.zoom*distance(touches)/pinch.distance),center=touchCenter(touches);
+  if(Math.abs(targetZoom-pinch.pendingZoom)>=.08)pinch.pendingZoom=targetZoom;
+  pinch.pendingCenter=center;
+  if(pinch.frame===null)pinch.frame=requestAnimationFrame(renderPinchPreview);
+}
+function finishPinch(){
+  if(!pinch)return;
+  if(pinch.frame!==null){cancelAnimationFrame(pinch.frame);pinch.frame=null;renderPinchPreview();}
+  const completed=pinch,finalZoom=clamp(completed.previewZoom),finalCenter=completed.pendingCenter;pinch=null;
+  pagesElement.style.transform='';pagesElement.style.willChange='auto';zoom=finalZoom;applySizing();
+  const model=models.find(item=>item.number===completed.modelNumber);
+  if(model&&completed.anchorX!==null&&completed.anchorY!==null){
     const rect=model.element.getBoundingClientRect();
-    window.scrollBy({left:rect.left+pinch.anchorX*rect.width-center.x,top:rect.top+pinch.anchorY*rect.height-center.y,behavior:'auto'});
+    window.scrollBy({left:rect.left+completed.anchorX*rect.width-finalCenter.x,top:rect.top+completed.anchorY*rect.height-finalCenter.y,behavior:'auto'});
   }else{
-    const scale=nextZoom/pinch.zoom;
-    window.scrollTo({left:(pinch.scrollX+pinch.center.x)*scale-center.x,top:(pinch.scrollY+pinch.center.y)*scale-center.y,behavior:'auto'});
+    const scale=finalZoom/completed.zoom;
+    window.scrollTo({left:(completed.scrollX+completed.center.x)*scale-finalCenter.x,top:(completed.scrollY+completed.center.y)*scale-finalCenter.y,behavior:'auto'});
   }
+  reportZoomValue();scheduleRender(0);requestAnimationFrame(updateCurrentPage);
 }
 document.addEventListener('touchstart',event=>{
   if(pencilPointerId!==null)return;
@@ -319,7 +344,7 @@ document.addEventListener('touchmove',event=>{
   }
 },{passive:false});
 document.addEventListener('touchend',event=>{
-  if(pinch&&event.touches.length<2){pinch=null;renderAnnotations();scheduleRender();}
+  if(pinch&&event.touches.length<2){finishPinch();tapTouch=null;snapTouch=null;return;}
   if(tapTouch&&event.changedTouches.length>0){
     const touch=event.changedTouches[0],dx=touch.clientX-tapTouch.x,dy=touch.clientY-tapTouch.y,elapsed=Date.now()-tapTouch.time;
     if(Math.abs(dx)<=10&&Math.abs(dy)<=10&&elapsed<300){
@@ -343,9 +368,9 @@ document.addEventListener('touchend',event=>{
 },{passive:true});
 document.addEventListener('touchcancel',()=>{
   tapTouch=null;snapTouch=null;
-  pinch=null;
+  finishPinch();
 },{passive:true});
-window.addEventListener('resize',()=>{applySizing();scheduleRender();});
+window.addEventListener('resize',()=>{if(pinch)finishPinch();else{applySizing();scheduleRender();}});
 window.addEventListener('scroll',handleScroll,{passive:true});
 window.mulistPdf={setZoom,setLayout,setNavigationMode,scrollToPage,setMenuVisible:value=>{menuVisible=Boolean(value);},setDrawingTool:value=>{drawingTool=value==='pen'||value==='highlighter'||value==='eraser'?value:null;},setDrawingColor:value=>{if(typeof value==='string'&&/^#[0-9A-Fa-f]{6}$/.test(value))drawingColor=value;},setPencilSmoothing:value=>{if(Number.isFinite(value))pencilSmoothing=Math.max(0,Math.min(10,value));},setNoteLayer:value=>{if(value&&Array.isArray(value.strokes)&&Array.isArray(value.texts)){noteLayer=value;renderAnnotations();}}};
 
@@ -367,7 +392,7 @@ void (async()=>{try{
     element.className='page';element.dataset.page=String(number);canvas.className='pdf-canvas';annotationCanvas.className='annotation-layer';element.append(canvas,annotationCanvas);pagesElement.append(element);
     models.push({page,number,element,canvas,annotationCanvas,originalWidth:viewport.width,ratio:viewport.height/viewport.width,task:null});
   }
-  applySizing();statusElement.remove();reportZoom();
+  applySizing();statusElement.remove();reportZoomValue();
   send({type:'ready',pageCount:pdfDocument.numPages});
   await renderAll();
   scrollToPage(currentPage);reportPage();
