@@ -85,7 +85,11 @@
 - [ ] Verify the new offline PDF.js viewer, single-renderer two-page layout, 25%
       full-page zoom-out, and live pinch percentage on the target 11-inch iPad.
 - [ ] Measure PDF.js initial render time and memory use with large real-world Song
-      Packages; add visible-page lazy rendering if long scores exceed the MVP target.
+      Packages and tune the implemented visible-page ±2 buffer if rapid scrolling shows
+      blank pages or the three-WebView Setlist cache exceeds the iPad memory target.
+- [ ] Device-test Setlist cache promotion across at least five Songs and verify that
+      the next two Songs open from their parsed first-page preload while the oldest of
+      four candidates is actually released.
 - [ ] Replace the temporary Base64 PDF transfer with a chunked binary bridge if large
       Song Packages cause memory pressure. Base64 was chosen for reliable Expo Go
       WKWebView loading after local file access stalled on the target iPad.

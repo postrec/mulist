@@ -130,6 +130,9 @@
   - [x] Expanded Right Viewer Pane
   - [x] Open Full Viewer Action
 - [x] Viewer Setlist Quick Navigation
+- [x] Render Visible PDF Pages Plus Two-Page Buffer
+- [x] Preload Next Setlist Songs through First Page
+- [x] Three-Song Setlist PDF.js LRU Cache
 
 # Music Features
 

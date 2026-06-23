@@ -632,3 +632,19 @@
 - Added a compact chevron control at the bottom of the toolbar. Hiding it also clears
   the active drawing tool to prevent accidental marks; a small persistent Pen button
   remains in the same corner to restore the full toolbar.
+
+## 2026-06-23 — Setlist PDF Render and LRU Cache
+
+- Replaced eager whole-document PDF canvas rendering with a visible-range renderer.
+  MuList keeps the pages currently intersecting the viewport plus two pages before and
+  after; distant PDF canvases release their pixel buffers while page geometry and
+  annotation data remain available for scrolling.
+- Added a Setlist-aware PDF cache that loads the current Song and the next two ordered
+  Songs. Hidden 2×2 WebViews parse each PDF with PDF.js and render only page 1, avoiding
+  full-document work during preloading.
+- Cached WebViews are promoted directly to the visible Viewer when their Song is
+  selected, preserving the parsed PDF and first-page canvas instead of constructing a
+  replacement WebView. Promotion restores the Song's saved layout and current page.
+- The cache is capped at three PDF.js WebViews. Active and predicted next Songs are
+  protected while the least-recently-used Song outside the current prediction window
+  is unmounted, releasing its PDF document, Base64 data, and canvas memory.

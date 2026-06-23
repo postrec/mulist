@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type {
+  NoteLayer,
   ScoreNavigationMode,
   ScoreViewState,
   Setlist,
@@ -37,6 +38,7 @@ import {
   ViewerMenuBar,
 } from '../components/ViewerMenus';
 import { usePdfViewer } from '../hooks/usePdfViewer';
+import { useSetlistPdfCache } from '../hooks/useSetlistPdfCache';
 
 interface PdfViewerScreenProps {
   backLabel?: string;
@@ -51,6 +53,8 @@ interface PdfViewerScreenProps {
 const MIN_ZOOM = 25;
 const MAX_ZOOM = 250;
 const ZOOM_STEP = 25;
+const EMPTY_NOTE_LAYER: NoteLayer = { strokes: [], texts: [], version: 2 };
+const doNothing = () => undefined;
 
 export function PdfViewerScreen({
   backLabel,
@@ -63,6 +67,23 @@ export function PdfViewerScreen({
 }: PdfViewerScreenProps) {
   useAppLanguage();
   const viewer = usePdfViewer(song);
+  const currentViewerScore =
+    viewer.score?.songId === song.id ? viewer.score : null;
+  const cachedScores = useSetlistPdfCache(
+    song.id,
+    currentViewerScore,
+    setlist?.id ?? null,
+    setlistSongs,
+  );
+  const activeScore =
+    currentViewerScore ??
+    cachedScores.find((score) => score.songId === song.id) ??
+    null;
+  const renderedScores = activeScore
+    ? cachedScores.some((score) => score.id === activeScore.id)
+      ? cachedScores
+      : [...cachedScores.slice(-2), activeScore]
+    : cachedScores;
   const { settings } = useAppSettings();
   const [tool, setTool] = useState<AnnotationTool | null>(null);
   const [penColor, setPenColor] = useState('#C62828');
@@ -103,16 +124,16 @@ export function PdfViewerScreen({
   }, [settings.landscapeLock]);
 
   useEffect(() => {
-    if (!viewer.score) return;
-    setLayout(viewer.score.viewState.layout);
-    setNavigationMode(viewer.score.viewState.navigationMode);
-    setCurrentPage(viewer.score.viewState.currentPage);
+    if (!activeScore) return;
+    setLayout(activeScore.viewState.layout);
+    setNavigationMode(activeScore.viewState.navigationMode);
+    setCurrentPage(activeScore.viewState.currentPage);
     setIsViewStateReady(true);
-  }, [viewer.score]);
+  }, [activeScore]);
 
   const updateViewState = (changes: Partial<ScoreViewState>) => {
-    if (!viewer.score) return;
-    void viewer.saveViewState({ ...viewer.score.viewState, ...changes });
+    if (!currentViewerScore) return;
+    void viewer.saveViewState({ ...currentViewerScore.viewState, ...changes });
   };
 
   const saveMetadata = async (metadata: ScoreMetadata) => {
@@ -123,6 +144,22 @@ export function PdfViewerScreen({
   const saveBpm = async (bpm: number) => {
     const updatedSong = await viewer.saveBpm(bpm);
     onSongUpdate(updatedSong);
+  };
+
+  const handleViewerTap = (page: number | null) => {
+    if (isMenuVisible) {
+      setIsMenuVisible(false);
+    } else if (page === null) {
+      setIsMenuVisible(true);
+    } else {
+      setCurrentPage(page);
+      updateViewState({ currentPage: page });
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateViewState({ currentPage: page });
   };
 
   return (
@@ -189,45 +226,59 @@ export function PdfViewerScreen({
       {!isMenuVisible ? (
         <ShowMenuButton onPress={() => setIsMenuVisible(true)} />
       ) : null}
-      {viewer.isLoading ? (
+      {viewer.isLoading && !activeScore ? (
         <ActivityIndicator color={colors.primary} style={styles.center} />
-      ) : viewer.score && isViewStateReady ? (
+      ) : activeScore && isViewStateReady ? (
         <View style={styles.viewerContainer}>
-          <PdfJsViewer
-            drawingColor={tool === 'highlighter' ? highlighterColor : penColor}
-            drawingWidth={tool === 'highlighter' ? highlighterWidth : penWidth}
-            drawingTool={
-              tool === 'pen' || tool === 'highlighter' || tool === 'eraser'
-                ? tool
-                : null
-            }
-            fileUri={viewer.score.pdfFile}
-            initialPage={currentPage}
-            layout={layout}
-            menuVisible={isMenuVisible}
-            navigationMode={navigationMode}
-            noteLayer={viewer.noteLayer}
-            onNoteLayerChange={(noteLayer) =>
-              void viewer.saveNoteLayer(noteLayer)
-            }
-            onTap={(page) => {
-              if (isMenuVisible) {
-                setIsMenuVisible(false);
-              } else if (page === null) {
-                setIsMenuVisible(true);
-              } else {
-                setCurrentPage(page);
-                updateViewState({ currentPage: page });
-              }
-            }}
-            onPageChange={(page) => {
-              setCurrentPage(page);
-              updateViewState({ currentPage: page });
-            }}
-            onZoomChange={(nextZoom) => setZoom(clampZoom(nextZoom))}
-            pencilSmoothing={settings.applePencilSmoothing}
-            zoom={zoom}
-          />
+          {renderedScores.map((score) => {
+            const isActive = score.songId === song.id;
+            const resolvedScore =
+              isActive && currentViewerScore ? currentViewerScore : score;
+            return (
+              <PdfJsViewer
+                drawingColor={
+                  tool === 'highlighter' ? highlighterColor : penColor
+                }
+                drawingWidth={
+                  tool === 'highlighter' ? highlighterWidth : penWidth
+                }
+                drawingTool={
+                  isActive &&
+                  currentViewerScore &&
+                  (tool === 'pen' ||
+                    tool === 'highlighter' ||
+                    tool === 'eraser')
+                    ? tool
+                    : null
+                }
+                fileUri={resolvedScore.pdfFile}
+                initialPage={isActive ? currentPage : 1}
+                key={resolvedScore.id}
+                layout={isActive ? layout : 'single'}
+                menuVisible={isActive && isMenuVisible}
+                navigationMode={isActive ? navigationMode : 'scroll'}
+                noteLayer={
+                  isActive && currentViewerScore
+                    ? viewer.noteLayer
+                    : (resolvedScore.noteLayer ?? EMPTY_NOTE_LAYER)
+                }
+                onNoteLayerChange={(noteLayer) => {
+                  if (isActive && currentViewerScore)
+                    void viewer.saveNoteLayer(noteLayer);
+                }}
+                onPageChange={isActive ? handlePageChange : doNothing}
+                onTap={isActive ? handleViewerTap : doNothing}
+                onZoomChange={
+                  isActive
+                    ? (nextZoom) => setZoom(clampZoom(nextZoom))
+                    : doNothing
+                }
+                pencilSmoothing={settings.applePencilSmoothing}
+                preloadOnly={!isActive}
+                zoom={isActive ? zoom : 100}
+              />
+            );
+          })}
           {isDrawingToolbarVisible ? (
             <DrawingToolbar
               color={tool === 'highlighter' ? highlighterColor : penColor}

@@ -31,6 +31,7 @@ interface PdfJsViewerProps {
   onPageChange: (page: number) => void;
   onZoomChange: (zoom: number) => void;
   pencilSmoothing?: number;
+  preloadOnly?: boolean;
   zoom: number;
 }
 
@@ -53,6 +54,7 @@ export function PdfJsViewer({
   onPageChange,
   onZoomChange,
   pencilSmoothing = 2,
+  preloadOnly = false,
   zoom,
 }: PdfJsViewerProps) {
   const webView = useRef<WebView>(null);
@@ -65,6 +67,8 @@ export function PdfJsViewer({
   const initialDrawingColor = useRef(drawingColor).current;
   const initialDrawingWidth = useRef(drawingWidth).current;
   const initialPencilSmoothing = useRef(pencilSmoothing).current;
+  const initialPreloadOnly = useRef(preloadOnly).current;
+  const wasPreloadOnly = useRef(preloadOnly);
   const [assets, setAssets] = useState<PdfJsAssetUris | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -127,6 +131,7 @@ export function PdfJsViewer({
             initialDrawingColor,
             initialDrawingWidth,
             initialPencilSmoothing,
+            initialPreloadOnly,
             pdfBase64,
           })
         : null,
@@ -140,6 +145,7 @@ export function PdfJsViewer({
       initialDrawingColor,
       initialDrawingWidth,
       initialPencilSmoothing,
+      initialPreloadOnly,
       pdfBase64,
       restoredPage,
     ],
@@ -204,6 +210,23 @@ export function PdfJsViewer({
   useEffect(() => {
     if (!isReady) return;
     webView.current?.injectJavaScript(
+      `window.mulistPdf.setPreloadOnly(${preloadOnly});true;`,
+    );
+  }, [isReady, preloadOnly]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    if (wasPreloadOnly.current && !preloadOnly) {
+      webView.current?.injectJavaScript(
+        `window.mulistPdf.scrollToPage(${initialPage});true;`,
+      );
+    }
+    wasPreloadOnly.current = preloadOnly;
+  }, [initialPage, isReady, preloadOnly]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    webView.current?.injectJavaScript(
       `window.mulistPdf.setNoteLayer(${JSON.stringify(noteLayer)});true;`,
     );
   }, [isReady, noteLayer]);
@@ -229,12 +252,24 @@ export function PdfJsViewer({
     }
   };
 
-  if (error) return <Text style={styles.error}>{error}</Text>;
+  if (error)
+    return preloadOnly ? (
+      <View style={styles.preloadContainer} />
+    ) : (
+      <Text style={styles.error}>{error}</Text>
+    );
   if (!assets || !pdfBase64 || !html) {
-    return <ActivityIndicator color={colors.primary} style={styles.center} />;
+    return preloadOnly ? (
+      <View style={styles.preloadContainer} />
+    ) : (
+      <ActivityIndicator color={colors.primary} style={styles.center} />
+    );
   }
   return (
-    <View style={styles.container}>
+    <View
+      pointerEvents={preloadOnly ? 'none' : 'auto'}
+      style={preloadOnly ? styles.preloadContainer : styles.container}
+    >
       <WebView
         allowFileAccess
         allowingReadAccessToURL={assets.readAccessUri}
@@ -328,6 +363,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const styles = StyleSheet.create({
   container: { flex: 1, width: '100%' },
+  preloadContainer: {
+    height: 2,
+    opacity: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    width: 2,
+  },
   webView: { backgroundColor: '#272927', flex: 1 },
   center: { flex: 1 },
   error: { color: '#E9897E', padding: 24, textAlign: 'center' },

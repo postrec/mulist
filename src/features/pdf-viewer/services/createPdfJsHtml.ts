@@ -10,6 +10,7 @@ interface PdfJsHtmlOptions extends PdfJsAssetUris {
   initialNavigationMode: ScoreNavigationMode;
   initialNoteLayer: NoteLayer;
   initialPencilSmoothing: number;
+  initialPreloadOnly: boolean;
   initialPage: number;
   initialZoom: number;
   pdfBase64: string;
@@ -24,6 +25,7 @@ export function createPdfJsHtml(options: PdfJsHtmlOptions): string {
     initialNavigationMode: options.initialNavigationMode,
     initialNoteLayer: options.initialNoteLayer,
     initialPencilSmoothing: options.initialPencilSmoothing,
+    initialPreloadOnly: options.initialPreloadOnly,
     initialPage: options.initialPage,
     initialZoom: options.initialZoom,
     pdfBase64: options.pdfBase64,
@@ -59,6 +61,7 @@ const send=message=>window.ReactNativeWebView?.postMessage(JSON.stringify(messag
 let pdfDocument=null,zoom=clamp(config.initialZoom),layout=config.initialLayout,navigationMode=config.initialNavigationMode;
 let currentPage=Math.max(1,config.initialPage),pageReportTimer=null,transitionRunning=false;
 let models=[],renderGeneration=0,renderTimer=null,pinch=null,snapTouch=null,tapTouch=null,lastSentZoom=-1,menuVisible=true,horizontalSnapTimer=null,horizontalSnapping=false;
+let preloadOnly=Boolean(config.initialPreloadOnly);
 let drawingTool=null,drawingColor=config.initialDrawingColor??'#C62828',drawingWidth=Math.max(1,Math.min(40,config.initialDrawingWidth??3.5)),pencilSmoothing=Math.max(0,Math.min(10,config.initialPencilSmoothing??2)),pencilStroke=null,pencilPointerId=null,pencilModel=null,noteLayer=config.initialNoteLayer??{version:2,strokes:[],texts:[]};
 
 function isHorizontal(){return navigationMode==='snap-horizontal'||navigationMode==='snap-horizontal-page';}
@@ -264,14 +267,24 @@ function snapHorizontalToNearest(){
 function handleScroll(){
   updateCurrentPage();
   if(pinch)return;
+  scheduleRender(70);
   if(navigationMode!=='snap-horizontal-page'||horizontalSnapping)return;
   clearTimeout(horizontalSnapTimer);
   horizontalSnapTimer=setTimeout(snapHorizontalToNearest,140);
 }
 async function renderAll(){
   const generation=++renderGeneration;
+  const visible=models.filter(model=>{const rect=model.element.getBoundingClientRect();return rect.bottom>=0&&rect.top<=innerHeight&&rect.right>=0&&rect.left<=innerWidth;});
+  const visibleNumbers=visible.length>0?visible.map(model=>model.number):[currentPage];
+  const first=preloadOnly?1:Math.max(1,Math.min(...visibleNumbers)-2),last=preloadOnly?1:Math.min(models.length,Math.max(...visibleNumbers)+2);
   for(const model of models){
     if(generation!==renderGeneration)return;
+    if(model.number<first||model.number>last){
+      model.task?.cancel();model.task=null;model.renderedZoom=null;
+      if(model.canvas.width!==1||model.canvas.height!==1){model.canvas.width=1;model.canvas.height=1;}
+      continue;
+    }
+    if(model.renderedZoom===zoom&&model.canvas.width>1)continue;
     model.task?.cancel();
     const cssWidth=pageWidthFor(model)*zoom/100;
     const pixelRatio=Math.min(window.devicePixelRatio||1,2);
@@ -280,7 +293,7 @@ async function renderAll(){
     model.canvas.style.width=cssWidth+'px';model.canvas.style.height=cssWidth*model.ratio+'px';
     const context=model.canvas.getContext('2d',{alpha:false});
     model.task=model.page.render({canvas:model.canvas,canvasContext:context,viewport});
-    try{await model.task.promise;}catch(error){if(error?.name!=='RenderingCancelledException')throw error;}
+    try{await model.task.promise;model.renderedZoom=zoom;}catch(error){if(error?.name!=='RenderingCancelledException')throw error;}finally{model.task=null;}
   }
 }
 function distance(touches){
@@ -382,7 +395,7 @@ document.addEventListener('touchcancel',()=>{
 },{passive:true});
 window.addEventListener('resize',()=>{if(pinch)finishPinch();else{applySizing();scheduleRender();}});
 window.addEventListener('scroll',handleScroll,{passive:true});
-window.mulistPdf={setZoom,setLayout,setNavigationMode,scrollToPage,setMenuVisible:value=>{menuVisible=Boolean(value);},setDrawingTool:value=>{drawingTool=value==='pen'||value==='highlighter'||value==='eraser'?value:null;},setDrawingColor:value=>{if(typeof value==='string'&&/^#[0-9A-Fa-f]{6}$/.test(value))drawingColor=value;},setDrawingWidth:value=>{if(Number.isFinite(value))drawingWidth=Math.max(1,Math.min(40,value));},setPencilSmoothing:value=>{if(Number.isFinite(value))pencilSmoothing=Math.max(0,Math.min(10,value));},setNoteLayer:value=>{if(value&&Array.isArray(value.strokes)&&Array.isArray(value.texts)){noteLayer=value;renderAnnotations();}}};
+window.mulistPdf={setZoom,setLayout,setNavigationMode,scrollToPage,setMenuVisible:value=>{menuVisible=Boolean(value);},setDrawingTool:value=>{drawingTool=value==='pen'||value==='highlighter'||value==='eraser'?value:null;},setDrawingColor:value=>{if(typeof value==='string'&&/^#[0-9A-Fa-f]{6}$/.test(value))drawingColor=value;},setDrawingWidth:value=>{if(Number.isFinite(value))drawingWidth=Math.max(1,Math.min(40,value));},setPencilSmoothing:value=>{if(Number.isFinite(value))pencilSmoothing=Math.max(0,Math.min(10,value));},setPreloadOnly:value=>{const next=Boolean(value);if(next===preloadOnly)return;preloadOnly=next;applySizing();scheduleRender(0);},setNoteLayer:value=>{if(value&&Array.isArray(value.strokes)&&Array.isArray(value.texts)){noteLayer=value;renderAnnotations();}}};
 
 void (async()=>{try{
   const pdfjs=pdfjsLib;
@@ -400,12 +413,11 @@ void (async()=>{try{
     const page=await pdfDocument.getPage(number),viewport=page.getViewport({scale:1});
     const element=document.createElement('section'),canvas=document.createElement('canvas'),annotationCanvas=document.createElement('canvas');
     element.className='page';element.dataset.page=String(number);canvas.className='pdf-canvas';annotationCanvas.className='annotation-layer';element.append(canvas,annotationCanvas);pagesElement.append(element);
-    models.push({page,number,element,canvas,annotationCanvas,originalWidth:viewport.width,ratio:viewport.height/viewport.width,task:null});
+    models.push({page,number,element,canvas,annotationCanvas,originalWidth:viewport.width,ratio:viewport.height/viewport.width,renderedZoom:null,task:null});
   }
   applySizing();statusElement.remove();reportZoomValue();
   send({type:'ready',pageCount:pdfDocument.numPages});
-  await renderAll();
-  scrollToPage(currentPage);reportPage();
+  scrollToPage(currentPage);await renderAll();reportPage();
 }catch(error){
   statusElement.textContent='PDF를 열지 못했습니다.';send({type:'error',message:error?.message??String(error)});
 }})();
