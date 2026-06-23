@@ -32,8 +32,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
     paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingVertical: 10,
   },
   selectedContainer: {
     backgroundColor: colors.primary,
@@ -43,6 +45,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
     fontWeight: '600',
+    lineHeight: 20,
   },
   selectedLabel: {
     color: colors.surface,

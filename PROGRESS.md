@@ -648,3 +648,114 @@
 - The cache is capped at three PDF.js WebViews. Active and predicted next Songs are
   protected while the least-recently-used Song outside the current prediction window
   is unmounted, releasing its PDF document, Base64 data, and canvas memory.
+
+## 2026-06-23 — Image Scores, Force Sync, and App Logs
+
+- Added a Library import chooser for PDF files or gallery images. Gallery selection
+  supports up to 30 images and immediately opens an ordering modal with page previews
+  and explicit up/down controls.
+- Ordered images are resized to an A4-appropriate maximum width, encoded into one
+  paginated HTML document, exported as a single PDF, copied into the normal Song
+  Package, duplicate-checked, and queued through the existing OCR pipeline.
+- Extended OCR results with optional text blocks. When recognition completes, the
+  highest block becomes the title for an `이미지 악보`; legacy text-only OCR falls back
+  to its first non-empty line. The actual Expo-compatible recognition engine remains a
+  device integration dependency.
+- Added `지금 모든 곡 데이터 동기화` to Cloud Sync settings. It uploads every active
+  Song sequentially, persists each progress/error entry, and displays the latest lines
+  in a bottom-right panel. A fully successful run dismisses the panel after one minute.
+- Activated the existing SQLite `sync_logs` table as a bounded 1,000-entry application
+  log store. MuList error reporting and manual sync progress now persist there, and the
+  Support section includes an All Logs screen with refresh, selectable messages, and
+  clear-all controls.
+
+## 2026-06-23 — CCM Tag Preset
+
+- Removed the short-lived per-Song custom-tag editor and returned Song metadata to the
+  fixed preset catalog.
+- Added canonical tag ID `ccm` with visible label `CCM`; `교회음악` and `교회` now
+  normalize to the same ID in storage and tag search.
+- Added canonical tag ID `indie` with visible label `Indie`; `인디` and `인디밴드`
+  normalize to it through the same preset and search alias path.
+
+## 2026-06-23 — PDF Loading Timing Profile
+
+- Added low-overhead timing collection for PDF.js asset preparation, native Base64
+  file reads, HTML construction, WebView document load, PDF.js engine bootstrap,
+  Base64 decoding, `getDocument` parsing, all-page metadata construction, first visible
+  render, WebView total, and native mount-to-first-render total.
+- Measurements remain in memory during loading and are persisted only after the first
+  visible render, avoiding SQLite writes inside the measured critical path.
+- Each profile is stored as one multiline `[PDF 성능]` entry in Support → All Logs and
+  tagged `ACTIVE` or `PRELOAD` so foreground loading can be compared with Setlist cache
+  preparation.
+
+## 2026-06-23 — Priority PDF Page Rendering
+
+- Replaced the visible-page ±2 sequential renderer with a two-stage priority pipeline.
+  The current page and its next page render first; only after both finish are the
+  previous page and the page two positions ahead rendered in the background.
+- A scroll or layout/zoom update invalidates the pending generation and restarts the
+  same priority order around the newly active page. PDF pixel buffers outside the
+  four-page window are released while page geometry and annotations remain intact.
+- Setlist hidden preload viewers retain their smaller contract: parse the document and
+  render page 1 only. `first_visible_render` now measures the foreground current/next
+  pair rather than including the background buffer.
+- Follow-up device behavior showed that canceling a PDF.js task while reusing its live
+  canvas could leave the page blank until a later zoom triggered another render. Page
+  rendering now occurs on a detached canvas and atomically replaces the visible canvas
+  only after success, preserving the previous image throughout scrolling and canceled
+  work. Distant canvases are released only after the new current/next pair is ready.
+- Scroll events now restart the render pipeline only when the active page actually
+  changes, preventing continuous scrolling from repeatedly delaying or canceling the
+  same page render.
+- Added a final low-resolution preview sweep after the four-page priority window is
+  ready. Remaining pages render nearest-first at 0.35× pixel density with a frame-sized
+  pause between pages, so fast scrolling has a visible fallback without competing with
+  the current page. Moving to a new page cancels the sweep and upgrades that page and
+  its next page to full device resolution first; old full-resolution distant canvases
+  are progressively replaced by their smaller preview versions to bound memory use.
+- Moved the preview pixel-density multiplier into persistent Developer Mode settings.
+  It defaults to 35%, can be tuned from 10% to 100% in 5% steps, is normalized when
+  reading legacy settings, and is delivered to both full and inline PDF.js viewers.
+- PDF.js `ready` messages now expose the real document page count to React Native. The
+  always-available drawing toolbar shows a compact tabular `current / total` indicator
+  below its Pen, Highlighter, and Eraser controls.
+- Fixed two-page horizontal navigation on iOS WebView, where gestures can scroll the
+  document body without emitting the previously observed `window` scroll event. Window,
+  document-capture, body, and horizontal touch movement now feed one animation-frame
+  tracker. The active spread is selected against the 10% two-page left inset, then sent
+  to React Native and used to restart the priority render window.
+- Two-page horizontal snap now uses overlapping spreads instead of odd-only pairs:
+  `1–2`, `2–3`, `3–4`, and so on. Normalization permits every page except the final
+  page as a spread start, while other two-page navigation modes retain their existing
+  odd-pair behavior. Snap commands target the element that actually owns horizontal
+  scroll on WKWebView (`body`, scrolling element, or document element), keeping each
+  pair centered inside the existing 10% left/right margins.
+- Page taps in overlapping two-page snap mode now preserve context. Tapping either page
+  already inside the active pair is a no-op; tapping a page to the right makes it the
+  right page of the nearest pair, while tapping a page to the left makes it the left
+  page. React Native no longer overwrites the current page from the raw tap target and
+  instead persists only the page reported after PDF.js completes navigation.
+- Two-page layout now separates the saved layout choice from its effective navigation
+  unit. While two horizontal pages fit inside the intended 80% viewport, navigation
+  uses a two-page spread. As soon as zoom makes their combined width exceed that area,
+  normalization, current-page tracking, snapping, rendering anchors, and page taps
+  switch to single-page behavior. Zooming back down restores two-page spread behavior
+  without changing the user's saved layout setting.
+- Refined the effective single-page threshold to the requested page-width rule: a
+  horizontal page switches to one-page navigation when its displayed width reaches 48%
+  of the viewer. Snap alignment is now derived from rendered widths rather than a fixed
+  inset. Middle single pages center their own width, two-page spreads center the full
+  page-gap-page group, and only the first/last single pages retain edge alignment.
+  Horizontal padding expands dynamically when a smaller two-page spread needs more than
+  the former 10% margin to remain centered.
+- Horizontal scroll and horizontal snap modes now retain vertical overflow, allowing
+  performers to pan down an enlarged page without changing navigation modes. Scroll
+  tracking measures horizontal displacement separately, so vertical-only movement
+  still updates the viewport naturally but no longer starts or restarts horizontal
+  snap alignment.
+- Fixed horizontal snap alignment resetting the document to the top. The horizontal
+  scroll command now reads the active vertical offset across WKWebView's window, body,
+  document element, and scrolling element, then preserves that `top` value while only
+  changing the horizontal destination.

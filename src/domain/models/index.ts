@@ -4,6 +4,7 @@ export type {
   AnnotationStroke,
   NoteLayer,
   OcrData,
+  OcrTextBlock,
   OcrLanguage,
   Score,
   ScoreNavigationMode,

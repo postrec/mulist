@@ -19,6 +19,7 @@ import {
 import { SettingsRow } from '../components/SettingsRow';
 import type { SettingsRoute } from '../types';
 import { AccountSettingsScreen } from './AccountSettingsScreen';
+import { AllLogsScreen } from './AllLogsScreen';
 import { CloudSyncSettingsScreen } from './CloudSyncSettingsScreen';
 import { DisplaySettingsScreen } from './DisplaySettingsScreen';
 import { DeveloperSettingsScreen } from './DeveloperSettingsScreen';
@@ -37,6 +38,7 @@ function getRouteLabel(route: SettingsRoute): string {
   if (route === 'display') return t('settings.displaySettings');
   if (route === 'feedback') return t('settings.feedback');
   if (route === 'language') return t('settings.language');
+  if (route === 'logs') return '모든 로그';
   if (route === 'subscription') return t('settings.subscription');
   if (route === 'sync') return t('settings.cloudSync');
   return t('settings.versionInfo');
@@ -116,6 +118,7 @@ function SettingsHome({
           label={t('settings.feedback')}
           onPress={() => onSelect('feedback')}
         />
+        <SettingsRow label="모든 로그 보기" onPress={() => onSelect('logs')} />
         <SettingsRow
           label={t('settings.versionInfo')}
           onPress={() => onSelect('version')}
@@ -215,6 +218,7 @@ function SettingsRouteContent({ route }: { route: SettingsRoute }) {
   if (route === 'sync') return <CloudSyncSettingsScreen />;
   if (route === 'developer') return <DeveloperSettingsScreen />;
   if (route === 'feedback') return <FeedbackSettingsScreen />;
+  if (route === 'logs') return <AllLogsScreen />;
   if (route === 'version') return <VersionSettingsScreen />;
   return (
     <View style={styles.placeholder}>

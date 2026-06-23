@@ -25,11 +25,14 @@
 
 - [x] Song List Screen
 - [x] Compact Library Filter Row
+- [x] Library Filter Row Height and Text-Clipping Refinement
 - [x] MuList Home Branding
 - [x] iPad Portrait Two-Column Library
 - [x] Tag Presets and Alias IDs
 - [x] Easy Tag Selection in Score Settings
 - [x] Tag Alias Search
+- [x] CCM Tag Preset with Church-Music Aliases
+- [x] Indie Tag Preset with Korean Aliases
 - [x] Library Header Count and Action Symbols
 - [x] Library Card Action Icons
 - [x] Stable Library Order on Favorite Change
@@ -52,6 +55,10 @@
 - [x] Batch PDF Import
 - [x] Auto Title Detection
 - [x] Duplicate Detection
+- [x] Gallery Image Multi-Selection
+- [x] Image Page Order Modal
+- [x] Merge Ordered Images into One A4 PDF
+- [x] Image Downscaling before PDF Conversion
 
 # PDF Viewer
 
@@ -109,6 +116,8 @@
 - [x] OCR Pipeline
 - [x] Background Processing
 - [x] Search Index
+- [x] Largest OCR Block Title Post-Processing
+- [ ] Connect On-Device Image OCR Recognizer
 
 # Search
 
@@ -131,6 +140,21 @@
   - [x] Open Full Viewer Action
 - [x] Viewer Setlist Quick Navigation
 - [x] Render Visible PDF Pages Plus Two-Page Buffer
+- [x] Priority PDF Render Pipeline (Current/Next, then Previous/Next-Two)
+  - [x] Preserve Existing Page Canvas until Replacement Render Completes
+  - [x] Restart Rendering only when Active Page Changes during Scroll
+  - [x] Deferred Low-Resolution Preview Rendering for All Remaining Pages
+  - [x] Developer Preview Quality Setting (10–100%)
+  - [x] Floating Toolbar Current/Total Page Indicator
+  - [x] iOS Horizontal Body/Document Scroll Page Tracking
+  - [x] Overlapping Two-Page Horizontal Snap Spreads (1–2, 2–3, 3–4)
+  - [x] Context-Aware Page Tap Navigation for Overlapping Spreads
+  - [x] Automatic Single-Page Navigation when Zoomed Two-Page Spread No Longer Fits
+  - [x] 48% Zoomed-Page Navigation Threshold
+  - [x] Dynamic Center Alignment for Single Pages and Two-Page Spreads
+  - [x] Vertical Pan Support in Horizontal Scroll and Snap Modes
+  - [x] Preserve Vertical Offset during Horizontal Snap Alignment
+- [x] PDF Loading Stage Timing Instrumentation
 - [x] Preload Next Setlist Songs through First Page
 - [x] Three-Song Setlist PDF.js LRU Cache
 
@@ -355,13 +379,15 @@
 ### Sync
 
 - [x] Sync 상태 보기
-- [ ] 강제 동기화 실행
-- [ ] Sync 로그 보기
+- [x] 지금 모든 곡 데이터 동기화
+- [x] 우측 하단 실시간 Sync 로그 및 1분 자동 숨김
+- [x] Sync 로그 보기
 
 ### Debug
 
 - [x] 테스트 Song 생성
 - [x] 테스트 Setlist 생성
+- [x] PDF 저해상도 미리보기 품질 설정
 
 ---
 
@@ -371,6 +397,8 @@
 - [x] 버그 제보
 - [x] 기능 제안
 - [x] 문의하기
+- [x] 지원 - 모든 로그 보기
+- [x] Persistent Error and Sync Log Storage
 
 ### Diagnostic Data
 

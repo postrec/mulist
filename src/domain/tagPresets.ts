@@ -11,6 +11,8 @@ export const tagPresets: readonly TagPreset[] = [
   { id: 'rnb', label: 'R&B', aliases: ['알앤비', 'r&b'] },
   { id: 'anime', label: '애니송', aliases: ['애니메이션', 'anime'] },
   { id: 'ballad', label: '발라드', aliases: ['ballad'] },
+  { id: 'ccm', label: 'CCM', aliases: ['교회음악', '교회'] },
+  { id: 'indie', label: 'Indie', aliases: ['인디', '인디밴드'] },
   { id: 'jazz', label: '재즈', aliases: ['재즈스탠다드', 'jazz standard'] },
   { id: 'rock', label: '락', aliases: ['록', 'rock'] },
   { id: 'metal', label: '메탈', aliases: ['metal'] },

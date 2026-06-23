@@ -201,6 +201,8 @@ function AppContent() {
         onFavoritePress={library.toggleFavorite}
         onMetadataSave={library.updateMetadata}
         onImportPress={library.importPdfs}
+        onImageImport={library.importImages}
+        onImagePick={library.pickImages}
         onRestorePress={library.restore}
         onSearchPress={() => setIsSearchOpen(true)}
         onSharePress={library.shareSong}

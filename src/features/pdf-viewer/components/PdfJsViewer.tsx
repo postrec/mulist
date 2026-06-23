@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 
 import { colors } from '../../../shared/theme/colors';
+import { reportInfo } from '../../../shared/logging/reportError';
 import type {
   NoteLayer,
   ScoreNavigationMode,
@@ -27,11 +28,13 @@ interface PdfJsViewerProps {
   menuVisible?: boolean;
   noteLayer?: NoteLayer;
   onNoteLayerChange?: (noteLayer: NoteLayer) => void;
+  onPageCountChange?: (pageCount: number) => void;
   onTap: (page: number | null) => void;
   onPageChange: (page: number) => void;
   onZoomChange: (zoom: number) => void;
   pencilSmoothing?: number;
   preloadOnly?: boolean;
+  previewScale?: number;
   zoom: number;
 }
 
@@ -50,14 +53,19 @@ export function PdfJsViewer({
   menuVisible = true,
   noteLayer = emptyNoteLayer,
   onNoteLayerChange,
+  onPageCountChange,
   onTap,
   onPageChange,
   onZoomChange,
   pencilSmoothing = 2,
   preloadOnly = false,
+  previewScale = 0.35,
   zoom,
 }: PdfJsViewerProps) {
   const webView = useRef<WebView>(null);
+  const nativeStartedAt = useRef(Date.now());
+  const timings = useRef<string[]>([]);
+  const webViewLoadStartedAt = useRef<number | null>(null);
   const lastViewerZoom = useRef<number | null>(null);
   const initialLayout = useRef(layout).current;
   const initialNavigationMode = useRef(navigationMode).current;
@@ -68,17 +76,39 @@ export function PdfJsViewer({
   const initialDrawingWidth = useRef(drawingWidth).current;
   const initialPencilSmoothing = useRef(pencilSmoothing).current;
   const initialPreloadOnly = useRef(preloadOnly).current;
+  const initialPreviewScale = useRef(previewScale).current;
   const wasPreloadOnly = useRef(preloadOnly);
   const [assets, setAssets] = useState<PdfJsAssetUris | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const profileLabel = `${initialPreloadOnly ? 'PRELOAD' : 'ACTIVE'} ${fileUri.split('/').at(-2) ?? fileUri}`;
+
+  const recordTiming = (stage: string, durationMs: number, detail?: string) => {
+    timings.current.push(
+      `${stage}=${durationMs.toFixed(1)}ms${detail ? ` · ${detail}` : ''}`,
+    );
+  };
+
+  const flushTimings = () => {
+    if (timings.current.length === 0) return;
+    reportInfo(
+      `[PDF 성능][${profileLabel}]\n${timings.current
+        .map((timing) => `- ${timing}`)
+        .join('\n')}`,
+    );
+    timings.current = [];
+  };
 
   useEffect(() => {
     let active = true;
+    const startedAt = Date.now();
     void preparePdfJsAssets()
       .then((prepared) => {
-        if (active) setAssets(prepared);
+        if (active) {
+          recordTiming('native_assets_prepare', Date.now() - startedAt);
+          setAssets(prepared);
+        }
       })
       .catch((assetError: unknown) => {
         if (active) {
@@ -96,12 +126,20 @@ export function PdfJsViewer({
 
   useEffect(() => {
     let active = true;
+    const startedAt = Date.now();
     setPdfBase64(null);
     void FileSystem.readAsStringAsync(fileUri, {
       encoding: FileSystem.EncodingType.Base64,
     })
       .then((data) => {
-        if (active) setPdfBase64(data);
+        if (active) {
+          recordTiming(
+            'native_pdf_base64_read',
+            Date.now() - startedAt,
+            `base64Chars=${data.length}`,
+          );
+          setPdfBase64(data);
+        }
       })
       .catch((fileError: unknown) => {
         if (active) {
@@ -117,39 +155,41 @@ export function PdfJsViewer({
     };
   }, [fileUri]);
 
-  const html = useMemo(
-    () =>
-      assets && pdfBase64
-        ? createPdfJsHtml({
-            ...assets,
-            fileUri,
-            initialLayout,
-            initialNavigationMode,
-            initialPage: restoredPage,
-            initialZoom,
-            initialNoteLayer,
-            initialDrawingColor,
-            initialDrawingWidth,
-            initialPencilSmoothing,
-            initialPreloadOnly,
-            pdfBase64,
-          })
-        : null,
-    [
-      assets,
+  const html = useMemo(() => {
+    if (!assets || !pdfBase64) return null;
+    const startedAt = Date.now();
+    const value = createPdfJsHtml({
+      ...assets,
       fileUri,
       initialLayout,
       initialNavigationMode,
+      initialPage: restoredPage,
       initialZoom,
       initialNoteLayer,
       initialDrawingColor,
       initialDrawingWidth,
       initialPencilSmoothing,
       initialPreloadOnly,
+      initialPreviewScale,
       pdfBase64,
-      restoredPage,
-    ],
-  );
+    });
+    recordTiming('native_html_build', Date.now() - startedAt);
+    return value;
+  }, [
+    assets,
+    fileUri,
+    initialLayout,
+    initialNavigationMode,
+    initialZoom,
+    initialNoteLayer,
+    initialDrawingColor,
+    initialDrawingWidth,
+    initialPencilSmoothing,
+    initialPreloadOnly,
+    initialPreviewScale,
+    pdfBase64,
+    restoredPage,
+  ]);
 
   useEffect(() => {
     if (!isReady || lastViewerZoom.current === zoom) return;
@@ -210,6 +250,13 @@ export function PdfJsViewer({
   useEffect(() => {
     if (!isReady) return;
     webView.current?.injectJavaScript(
+      `window.mulistPdf.setPreviewScale(${previewScale});true;`,
+    );
+  }, [isReady, previewScale]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    webView.current?.injectJavaScript(
       `window.mulistPdf.setPreloadOnly(${preloadOnly});true;`,
     );
   }, [isReady, preloadOnly]);
@@ -236,6 +283,7 @@ export function PdfJsViewer({
     if (!message) return;
     if (message.type === 'ready') {
       setIsReady(true);
+      onPageCountChange?.(message.pageCount);
     } else if (message.type === 'zoom') {
       lastViewerZoom.current = message.zoom;
       onZoomChange(message.zoom);
@@ -247,8 +295,19 @@ export function PdfJsViewer({
       onPageChange(message.page);
     } else if (message.type === 'noteLayer') {
       onNoteLayerChange?.(message.noteLayer);
+    } else if (message.type === 'performance') {
+      recordTiming(message.stage, message.durationMs, message.detail);
+      if (message.stage === 'viewer_total_ready') {
+        recordTiming(
+          'native_total_to_first_render',
+          Date.now() - nativeStartedAt.current,
+        );
+        flushTimings();
+      }
     } else {
       setError(message.message);
+      recordTiming('viewer_error', 0, message.message);
+      flushTimings();
     }
   };
 
@@ -274,6 +333,18 @@ export function PdfJsViewer({
         allowFileAccess
         allowingReadAccessToURL={assets.readAccessUri}
         javaScriptEnabled
+        onLoadEnd={() => {
+          if (webViewLoadStartedAt.current !== null) {
+            recordTiming(
+              'native_webview_load',
+              Date.now() - webViewLoadStartedAt.current,
+            );
+            webViewLoadStartedAt.current = null;
+          }
+        }}
+        onLoadStart={() => {
+          webViewLoadStartedAt.current = Date.now();
+        }}
         onMessage={receiveMessage}
         originWhitelist={['file://*']}
         ref={webView}
@@ -285,19 +356,27 @@ export function PdfJsViewer({
 }
 
 type ViewerMessage =
-  | { type: 'ready' }
+  | { pageCount: number; type: 'ready' }
   | { type: 'zoom'; zoom: number }
   | { page: number | null; type: 'tap' }
   | { page: number; type: 'page' }
   | { message: string; type: 'diagnostic' }
   | { message: string; type: 'error' }
+  | {
+      detail?: string;
+      durationMs: number;
+      stage: string;
+      type: 'performance';
+    }
   | { noteLayer: NoteLayer; type: 'noteLayer' };
 
 function parseViewerMessage(value: string): ViewerMessage | null {
   try {
     const parsed: unknown = JSON.parse(value);
     if (!isRecord(parsed) || typeof parsed.type !== 'string') return null;
-    if (parsed.type === 'ready') return { type: 'ready' };
+    if (parsed.type === 'ready' && typeof parsed.pageCount === 'number') {
+      return { pageCount: parsed.pageCount, type: 'ready' };
+    }
     if (parsed.type === 'zoom' && typeof parsed.zoom === 'number') {
       return { type: 'zoom', zoom: parsed.zoom };
     }
@@ -315,6 +394,18 @@ function parseViewerMessage(value: string): ViewerMessage | null {
     }
     if (parsed.type === 'error' && typeof parsed.message === 'string') {
       return { message: parsed.message, type: 'error' };
+    }
+    if (
+      parsed.type === 'performance' &&
+      typeof parsed.stage === 'string' &&
+      typeof parsed.durationMs === 'number'
+    ) {
+      return {
+        detail: typeof parsed.detail === 'string' ? parsed.detail : undefined,
+        durationMs: parsed.durationMs,
+        stage: parsed.stage,
+        type: 'performance',
+      };
     }
     if (parsed.type === 'noteLayer' && isNoteLayer(parsed.noteLayer)) {
       return { noteLayer: parsed.noteLayer, type: 'noteLayer' };

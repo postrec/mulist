@@ -12,6 +12,7 @@ import { reportError } from '../../../shared/logging/reportError';
 import { colors } from '../../../shared/theme/colors';
 import { getRepositories } from '../../../storage';
 import { PdfJsViewer } from '../../pdf-viewer/components/PdfJsViewer';
+import { useAppSettings } from '../../settings/context/AppSettingsContext';
 
 export function SetlistScorePreview({
   onOpenViewer,
@@ -20,6 +21,7 @@ export function SetlistScorePreview({
   onOpenViewer: () => void;
   song: Song;
 }) {
+  const { settings } = useAppSettings();
   const [score, setScore] = useState<Score | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
@@ -69,6 +71,7 @@ export function SetlistScorePreview({
             onPageChange={() => undefined}
             onTap={() => undefined}
             onZoomChange={setZoom}
+            previewScale={settings.pdfPreviewScale}
             zoom={zoom}
           />
         ) : error ? (

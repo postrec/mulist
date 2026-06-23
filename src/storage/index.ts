@@ -1,5 +1,6 @@
 import { getDatabase } from './database';
 import { OcrRepository } from './repositories/OcrRepository';
+import { LogRepository } from './repositories/LogRepository';
 import { ScoreRepository } from './repositories/ScoreRepository';
 import { SearchRepository } from './repositories/SearchRepository';
 import { SettingsRepository } from './repositories/SettingsRepository';
@@ -9,6 +10,7 @@ import { SyncQueueRepository } from './repositories/SyncQueueRepository';
 import { TeamRepository } from './repositories/TeamRepository';
 
 export interface Repositories {
+  logs: LogRepository;
   ocr: OcrRepository;
   songs: SongRepository;
   scores: ScoreRepository;
@@ -29,6 +31,7 @@ export function getRepositories(): Promise<Repositories> {
 async function createRepositories(): Promise<Repositories> {
   const database = await getDatabase();
   return {
+    logs: new LogRepository(database),
     ocr: new OcrRepository(database),
     songs: new SongRepository(database),
     scores: new ScoreRepository(database),
