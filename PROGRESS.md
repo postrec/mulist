@@ -292,3 +292,297 @@
 - Extended the explicit load timeout to 45 seconds for larger Song Package PDFs.
 - Generated HTML now passes syntax parsing for all four scripts; TypeScript, ESLint,
   Prettier, and the SDK 54 iOS export also passed.
+
+## 2026-06-22 — Performance Viewer Workflow
+
+- Renamed the Library eyebrow from `MY MUSIC` to `MULIST` and added a two-column Song
+  grid specifically for iPad portrait layouts.
+- Added SQLite migration v6 and Score-owned viewer state for page layout, current
+  page, and scroll/swipe navigation mode. Reopening a Song restores all three values.
+- Added a View popup for one/two-page selection and Scroll ON/OFF; OFF switches the
+  single PDF.js document to horizontally snapping pages.
+- Replaced top-level annotation buttons with a Drawing menu and a vertical pen,
+  highlighter, and eraser toolbar at the lower-right of the score.
+- Added full viewer-menu hide/show controls and removed Count In from performance
+  controls.
+- TypeScript, ESLint, Prettier, and the SDK 54 iOS export passed. The export contains
+  814 modules and a 4.03 MB application bundle.
+
+## 2026-06-22 — Canonical Tag Presets
+
+- Added canonical tag IDs for K-Pop, J-Pop, Pop, R&B, anime, ballad, jazz, rock,
+  metal, VTuber, game music, gugak, and Vocaloid.
+- Each preset owns Korean, English, and spelling aliases; stored Song tags normalize
+  to stable IDs while Library UI displays human-friendly labels.
+- Added multi-select preset chips to Score Settings and connected tag changes to the
+  existing Song Repository and search index update.
+- Tag-scoped and global search now resolve aliases such as `한국노래`, `일본노래`,
+  `알앤비`, and `버츄얼` to their canonical IDs.
+
+## 2026-06-22 — Viewer Menu and Swipe Polish
+
+- Moved Menu Hide after the music controls so it is the actual rightmost viewer-menu
+  action.
+- Anchored the View popup directly below its button with a transparent modal backdrop;
+  tapping any area outside the popup now dismisses it.
+- Reworked Scroll OFF to use a single horizontally scrolling PDF.js page container,
+  lock competing document scroll, and snap single pages or two-page spreads.
+- Current-page detection and restoration now normalize two-page mode to 1–2, 3–4,
+  and subsequent spread boundaries.
+- TypeScript, ESLint, Prettier, and the SDK 54 iOS export passed with 815 modules and a
+  4.04 MB application bundle.
+
+## 2026-06-22 — Discrete Swipe Pager
+
+- Changed Scroll OFF from a horizontally overflowing document layout to a standard
+  one-page pager: exactly one score page fills the viewport and each horizontal swipe
+  snaps to the adjacent page.
+- Swipe mode preserves the selected page layout. One-page mode advances by one page;
+  two-page mode shows only the current spread and advances `1–2 → 3–4` by two pages.
+- Replaced WebKit scroll-snap paging after device feedback showed inconsistent
+  behavior. Swipe mode now keeps only the current page visible and changes exactly one
+  page on each completed horizontal gesture; vertical gestures and two-finger pinch
+  remain separate.
+- Added a guarded 270ms two-stage slide transition: the current page or spread moves
+  out before the adjacent page or spread enters, avoiding an abrupt render swap while
+  preventing overlapping rapid-swipe animations.
+- Made swipe transitions interactive: the visible page or spread follows horizontal
+  finger movement, continues from the release position after crossing the threshold,
+  or springs back when cancelled. First and last pages apply edge resistance.
+- Swipe mode now keeps the adjacent previous and next page or spread positioned just
+  outside the viewport, so dragging reveals the destination content before release.
+- Expanded persisted navigation modes to Scroll, Snap, and Swipe. Snap preserves the
+  continuous vertical document but smoothly aligns the nearest page or two-page spread
+  start to the viewport when touch ends.
+
+## 2026-06-22 — Firebase Cloud Foundation
+
+- Added persistent Firebase Auth sessions with Google and Apple credential adapters;
+  social-provider console activation and a development-build device check remain.
+- Added SQLite v7/v8 cloud metadata, tombstones, retry queue, sync logs, teams, and
+  membership storage while retaining SQLite and local Song Packages as source of truth.
+- Implemented connectivity-aware backup/restore for Firestore metadata and Storage
+  PDFs plus annotation, OCR, and viewer-state sidecars. Conflict handling uses revision
+  first and updated time second, with soft-delete tombstones.
+- Added owner-scoped Firestore/Storage rules and role-scoped team access. Both rulesets
+  compiled successfully in the local Firebase emulators.
+- Added App-Check-enforced Cloud Functions for three-day shares, expiration cleanup,
+  share import, and team invitations, plus a Hosting fallback link and app deep link.
+- App and Functions TypeScript builds pass. Production deployment is waiting for
+  Firebase CLI reauthentication and Firebase/App Store provider configuration.
+
+## 2026-06-23 — Expo Go Authentication Compatibility
+
+- Removed eager loading of the native Google Sign-In package, which crashed Expo Go
+  before React Native could render because `RNGoogleSignin` is not bundled there.
+- Google Sign-In now loads only inside a compatible MuList development build and shows
+  an actionable message when invoked from Expo Go. The rest of the app remains usable
+  in Expo Go for PDF and local-library testing.
+
+## 2026-06-23 — Email and Password Authentication
+
+- Added Firebase email/password registration and sign-in as the provider-independent
+  account path while Google OAuth and Apple Developer enrollment remain pending.
+- Added credential validation, disabled-state handling, secure password input, and
+  user-facing Firebase error messages to Account Settings.
+
+## 2026-06-23 — Settings Account Summary
+
+- Added a live Firebase account summary at the top of Settings Home with the user's
+  display name or email and the active sign-in provider.
+- The summary reacts to sign-in and sign-out changes and opens Account Settings when
+  pressed; signed-out users see the existing Cloud sign-in guidance.
+
+## 2026-06-23 — Musician Profile
+
+- Fixed Account Settings to fall back to the authenticated email instead of showing
+  `로그인하지 않음` when an email/password account has no Firebase display name.
+- Added seven profile colors, editable name and 160-character bio, and a primary-part
+  selector covering performance, composition, production, and lighting roles.
+- Profile changes are saved locally first for offline access, mirrored to the Firebase
+  Auth display name, and synchronized to the user's protected Firestore profile path.
+- Settings Home now uses the saved profile color, name, and primary part.
+
+## 2026-06-23 — Settings Account Navigation Cleanup
+
+- Removed the duplicate Account row from the App Settings group. Account management
+  remains available through the profile summary card at the top of Settings Home.
+
+## 2026-06-23 — MuList Redeem Codes
+
+- Added authenticated MuList code redemption to Subscription Settings with localized
+  input, success, invalid-code, sign-in, and rate-limit states.
+- Codes are normalized and SHA-256 hashed before lookup; plaintext codes are never
+  stored. Firebase Functions atomically enforce activation, expiration, total-use
+  limits, per-user uniqueness, and five attempts per minute.
+- Successful redemption writes the protected entitlement document and immediately
+  updates the current plan to Premium. A local admin generator prints secure codes and
+  their Firestore document template.
+
+## 2026-06-23 — Library Song Actions and Sync Status
+
+- Added a long-press action menu to active Library songs with metadata editing,
+  individual Cloud sync, and a red delete action with confirmation.
+- Reused the validated score metadata editor for title, artist, BPM, and tags; edits
+  immediately mark the Song Package pending for Cloud sync.
+- Manual sync uploads the selected song's Firestore metadata and Firebase Storage PDF,
+  annotation, OCR, and viewer-state sidecars, then clears its pending queue entry.
+- Songs whose local sync status is not `synced` now show a cloud symbol immediately to
+  the left of the title; it disappears after a successful upload and Library refresh.
+
+## 2026-06-23 — Expo Go Firebase Storage Upload Fix
+
+- Replaced React Native `ArrayBuffer`-backed Blob uploads, which Expo Go does not
+  support, with Firebase Storage string uploads.
+- PDFs are read directly from the Song Package as Base64 and uploaded with PDF content
+  metadata; annotation/OCR/view-state sidecars use raw JSON strings without Blob
+  construction.
+
+## 2026-06-23 — Native File Resumable Storage Upload
+
+- Device testing confirmed Firebase `uploadString` still converts its input into an
+  unsupported React Native ArrayBuffer-backed Blob internally.
+- Replaced Firebase's web upload implementation with its authenticated resumable REST
+  protocol. Expo now streams the native Song Package `File` as the request body, while
+  JSON sidecars upload as plain UTF-8 text; no Blob or ArrayBuffer construction occurs.
+
+## 2026-06-23 — Storage Upload Stall Recovery
+
+- Device testing showed Expo's fetch-based native File request could remain pending
+  indefinitely during a resumable upload.
+- PDF transfer now uses Expo FileSystem's native binary upload task after the
+  authenticated resumable session is created. Session creation, JSON transfer, and PDF
+  transfer have explicit timeouts; a stalled native task is cancelled and reports a
+  concrete retryable error instead of leaving the Library at `동기화 중…`.
+
+## 2026-06-23 — SQLite Song Save and Error Diagnostics
+
+- Fixed the Song upsert SQL mismatch that supplied 15 placeholders for 16 columns and
+  caused `prepareAsync` to fail when a sync result saved its cloud state.
+- Added a shared `[MuList]` error reporter and connected user-facing Library, sync,
+  account, subscription, metadata, setlist, OCR, import, and developer-tool failures to
+  `console.error` with operation context and the original Error stack.
+
+## 2026-06-23 — Complete Song Package Manifest
+
+- Added a schema-versioned `metadata.json` to every synchronized Song Package, stored
+  identically in the local package directory and Firebase Storage package root.
+- The manifest mirrors all Firestore Song fields plus owner, song ID, sync state,
+  `scoreIds`, server timestamp, Firestore document path, and every PDF/sidecar Storage
+  path. Timestamps use portable ISO strings instead of Firebase-only Timestamp objects.
+- Each per-score annotation/OCR/view-state sidecar now embeds the same complete Song
+  manifest, while remaining backward-compatible with older flat score sidecars.
+
+## 2026-06-23 — Setlist Inline Score Preview
+
+- Reworked the iPad Setlists workspace into setlist navigation, song management, and a
+  dedicated right-side score preview pane.
+- The preview remains visually empty until a setlist song is selected. Selecting the
+  song title loads its first PDF in the existing offline PDF.js renderer, always
+  starting on page 1 with single-page layout regardless of the Song's saved viewer
+  layout.
+
+## 2026-06-23 — Setlist Performance Viewer Navigation
+
+- Reduced the navigation and management panes so the right-side inline score preview
+  owns substantially more of the iPad workspace.
+- Replaced preview title/artist chrome with a focused `뷰어로 이동` action that opens
+  the same full performance PDF Viewer used from Library.
+- The full Viewer now receives the selected Setlist and ordered Songs, shows a compact
+  bottom-left quick panel, and switches scores immediately when a row is pressed.
+- Returning from the full Viewer restores the originating Setlist, selected preview
+  Song, and three-pane workspace instead of dropping back to an empty Setlists state.
+
+## 2026-06-23 — Performance and Collaboration UX
+
+- Reduced the full Viewer Setlist panel to 190px and distributed all menu actions across
+  the available header width. Unified Search, Setlists, Settings, Social, and Viewer
+  headers on the shared 48px metric.
+- Hidden-menu PDF taps now distinguish page content from document margins: page taps
+  smoothly snap to that page, while margin taps reveal the menu. Visible-menu score
+  taps retain the existing hide behavior.
+- Improved Pencil strokes with pen pointer detection, pressure-responsive width,
+  quadratic smoothing, duplicate-point filtering, cancellation handling, and basic
+  palm-input rejection while Pencil input is active.
+- Added explicit Setlist edit mode with inline rename, edit-only arrows, a draggable
+  handle, and search-first Library additions. Added authenticated Setlist collaborator
+  invitations with viewer/editor roles.
+- Added an email-exact friend request workflow, incoming approvals, Friends list, and a
+  Social screen placed between Setlists and PDF Import in Library navigation.
+- Added long-press Song sharing through a three-day Firebase link and the native iOS
+  share sheet, which includes AirDrop. Shared metadata removes `favorite`; imports
+  always initialize it to `false`.
+- Replaced the text cloud marker with Material Community Icons `cloud-outline`, and made
+  status bars transparent so screen backgrounds extend through safe-area regions while
+  controls remain inside safe insets.
+
+## 2026-06-23 — Two-Page Horizontal Spread Sizing
+
+- Fixed two-page horizontal navigation at 100% zoom to a deterministic viewport grid:
+  page 1 uses 40%, page 2 uses 40%, and the spread keeps 10% outer margins on both
+  sides.
+- Horizontal page changes now align each odd-numbered spread start to the same 10%
+  inset, so only the active two-page spread occupies the full viewport.
+- Added a 10px gutter between the two pages while keeping the spread, including its
+  gutter, inside the original 80% content width and preserving both 10% outer margins.
+
+## 2026-06-23 — Four-Way Viewer Navigation Modes
+
+- Split Viewer navigation into Vertical Scroll, Vertical Snap, Horizontal Scroll, and
+  the new Horizontal Snap while preserving the legacy horizontal-scroll storage value.
+- Horizontal Snap follows normal continuous finger scrolling, then aligns the nearest
+  page or two-page spread to its start inset after momentum settles. Programmatic smooth
+  alignment is guarded to prevent recursive snapping.
+
+## 2026-06-23 — Pencil-Only Drawing and Safe Areas
+
+- Moved live pen and highlighter capture into the PDF.js WebView using iOS Pointer
+  Events. Only `pointerType: pen` is intercepted, so Apple Pencil draws while one- and
+  two-finger gestures continue to scroll and zoom the score.
+- Kept the React Native SVG annotation layer as a persisted render layer. It stops
+  intercepting input while pen or highlighter is selected, then displays each completed
+  WebView stroke after it is saved to the existing note sidecar.
+- Replaced the horizontally scrolling Viewer menu container with a fixed flex row so
+  every action remains in the top bar without lateral menu navigation.
+- Installed `react-native-safe-area-context`, added a root `SafeAreaProvider`, and
+  migrated all screen SafeAreaView imports. Status bars remain transparent while screen
+  controls continue to respect device insets.
+
+## 2026-06-23 — Page-Anchored Pencil Annotations
+
+- Replaced the viewport-fixed annotation canvas with one transparent canvas inside
+  every rendered PDF page. New strokes store their page number and page-normalized
+  coordinates, so scrolling moves them with the score and zooming scales their
+  position and width with the page.
+- Pencil pointer capture now suppresses scrolling, snapping, and tap-menu gestures for
+  the full duration of a pen, highlighter, or eraser action. Finger scrolling and
+  two-finger zoom remain available whenever Pencil is not touching the display.
+- Moved erasing into the same page-aware WebView input path and upgraded annotation
+  sidecars to version 2. Version 1 strokes remain readable and are treated as first-page
+  annotations because their original schema had no page identity.
+- Replaced drawing-tool text with accessible Font Awesome pen, highlighter, and eraser
+  icons.
+- Pinch zoom now records the exact normalized PDF point beneath the gesture centroid
+  and compensates the scroll offset after every scale update, preserving the user's
+  focal point instead of zooming from the document's top-left corner.
+
+## 2026-06-23 — Library Friend Label and Safer Deletion
+
+- Renamed the visible Library navigation and destination title from `소셜` to `친구`.
+- Removed the immediate delete control from active Song cards. Moving a Song to Trash
+  now remains available only through the long-press action sheet and its confirmation;
+  Trash-view restoration is unchanged.
+
+## 2026-06-23 — Pencil Smoothing, Colors, and Share Preparation
+
+- Stabilized pinch zoom by filtering sub-frame noise and limiting each zoom update's
+  maximum delta while retaining page focal-point compensation.
+- Added a persistent Apple Pencil curve-smoothing setting from 0 through 10, with a
+  light default of 2. The PDF.js input bridge applies progressive point interpolation
+  before its existing quadratic stroke rendering and preserves the raw final point.
+- Added accessible color swatches above the drawing toolbar whenever Pen or Highlighter
+  is selected. Each tool keeps its own session color and new strokes persist that color
+  in the annotation sidecar.
+- Sharing now checks the Song sync state. Pending or failed Songs upload automatically
+  before the three-day link is created, while already-synced Songs skip the redundant
+  package upload.

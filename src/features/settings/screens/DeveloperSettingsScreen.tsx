@@ -9,7 +9,10 @@ import {
   View,
 } from 'react-native';
 
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
+import { reportError } from '../../../shared/logging/reportError';
 import { useAppSettings } from '../context/AppSettingsContext';
 import {
   createTestSetlist,
@@ -22,14 +25,16 @@ import {
 } from '../services/developerTools';
 
 export function DeveloperSettingsScreen() {
+  useAppLanguage();
   const { settings, update } = useAppSettings();
   const [result, setResult] = useState('');
   const run = async (operation: () => Promise<string>) => {
     try {
       setResult(await operation());
     } catch (error: unknown) {
+      reportError('개발자 도구 실행 실패', error);
       setResult(
-        error instanceof Error ? error.message : '작업에 실패했습니다.',
+        error instanceof Error ? error.message : t('developer.loadingError'),
       );
     }
   };
@@ -38,8 +43,8 @@ export function DeveloperSettingsScreen() {
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.toggleRow}>
         <View style={styles.flex}>
-          <Text style={styles.title}>Developer Mode</Text>
-          <Text style={styles.detail}>진단 및 테스트 도구를 표시합니다.</Text>
+          <Text style={styles.title}>{t('settings.developerMode')}</Text>
+          <Text style={styles.detail}>{t('developer.description')}</Text>
         </View>
         <Switch
           onValueChange={(developerMode) => void update({ developerMode })}
@@ -48,9 +53,9 @@ export function DeveloperSettingsScreen() {
       </View>
       {settings.developerMode ? (
         <>
-          <ToolSection title="OCR">
+          <ToolSection title={t('developer.ocr')}>
             <ToolButton
-              label="OCR 강제 재실행"
+              label={t('developer.rerunOcr')}
               onPress={() =>
                 void run(
                   async () =>
@@ -59,19 +64,19 @@ export function DeveloperSettingsScreen() {
               }
             />
             <ToolButton
-              label="OCR 결과 보기"
+              label={t('developer.viewOcrResult')}
               onPress={() =>
                 void run(
                   async () =>
                     (await getOcrPreview()).join('\n') ||
-                    'OCR 결과가 없습니다.',
+                    t('developer.loadingError'),
                 )
               }
             />
           </ToolSection>
-          <ToolSection title="Database">
+          <ToolSection title={t('developer.database')}>
             <ToolButton
-              label="Song Count / Database 정보"
+              label={t('developer.stats')}
               onPress={() =>
                 void run(async () =>
                   JSON.stringify(await getDatabaseStats(), null, 2),
@@ -80,7 +85,7 @@ export function DeveloperSettingsScreen() {
             />
             <ToolButton
               destructive
-              label="Database 초기화"
+              label={t('developer.resetDatabase')}
               onPress={() =>
                 confirmReset(
                   () =>
@@ -92,9 +97,9 @@ export function DeveloperSettingsScreen() {
               }
             />
           </ToolSection>
-          <ToolSection title="Storage">
+          <ToolSection title={t('developer.storage')}>
             <ToolButton
-              label="Song Package / 사용량 보기"
+              label={t('developer.packageUsage')}
               onPress={() =>
                 void run(async () => {
                   const value = await getStorageStats();
@@ -103,12 +108,12 @@ export function DeveloperSettingsScreen() {
               }
             />
           </ToolSection>
-          <ToolSection title="Sync">
-            <Text style={styles.detail}>Sync 상태: Sync Queue 미구성</Text>
+          <ToolSection title={t('developer.sync')}>
+            <Text style={styles.detail}>{t('developer.syncStatus')}</Text>
           </ToolSection>
-          <ToolSection title="Debug">
+          <ToolSection title={t('developer.debug')}>
             <ToolButton
-              label="테스트 Song 생성"
+              label={t('developer.createTestSong')}
               onPress={() =>
                 void run(async () => {
                   await createTestSong();
@@ -117,7 +122,7 @@ export function DeveloperSettingsScreen() {
               }
             />
             <ToolButton
-              label="테스트 Setlist 생성"
+              label={t('developer.createTestSetlist')}
               onPress={() =>
                 void run(async () => {
                   await createTestSetlist();
@@ -169,10 +174,14 @@ function ToolButton({
   );
 }
 function confirmReset(onConfirm: () => void) {
-  Alert.alert('Database 초기화', '모든 Song과 Setlist를 삭제합니다.', [
-    { style: 'cancel', text: '취소' },
-    { style: 'destructive', text: '초기화', onPress: onConfirm },
-  ]);
+  Alert.alert(
+    t('developer.resetConfirmTitle'),
+    t('developer.resetConfirmBody'),
+    [
+      { style: 'cancel', text: t('common.cancel') },
+      { style: 'destructive', text: t('common.confirm'), onPress: onConfirm },
+    ],
+  );
 }
 function formatBytes(bytes: number): string {
   return bytes < 1024 * 1024

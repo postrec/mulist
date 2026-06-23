@@ -1,24 +1,26 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import type { Song } from '../../../domain/models';
 import { colors } from '../../../shared/theme/colors';
+import { getTagLabel } from '../../../domain/tagPresets';
 
 interface SongListItemProps {
   isTrash?: boolean;
   onFavoritePress: (song: Song) => void;
+  onLongPress?: (song: Song) => void;
   song: Song;
   onPress: (song: Song) => void;
   onRestorePress: (song: Song) => void;
-  onTrashPress: (song: Song) => void;
 }
 
 export function SongListItem({
   isTrash = false,
   onFavoritePress,
+  onLongPress,
   song,
   onPress,
   onRestorePress,
-  onTrashPress,
 }: SongListItemProps) {
   const detail = [song.artist, song.preferredKey, song.bpm && `${song.bpm} BPM`]
     .filter(Boolean)
@@ -30,21 +32,32 @@ export function SongListItem({
         accessibilityLabel={`${song.title}, ${song.artist}`}
         accessibilityRole="button"
         onPress={() => onPress(song)}
+        onLongPress={() => onLongPress?.(song)}
         style={({ pressed }) => [styles.songButton, pressed && styles.pressed]}
       >
         <View style={styles.thumbnail}>
           <Text style={styles.thumbnailLabel}>PDF</Text>
         </View>
         <View style={styles.content}>
-          <Text numberOfLines={1} style={styles.title}>
-            {song.title}
-          </Text>
+          <View style={styles.titleRow}>
+            {song.syncStatus !== 'synced' ? (
+              <MaterialCommunityIcons
+                accessibilityLabel="동기화되지 않음"
+                color={colors.muted}
+                name="cloud-outline"
+                size={17}
+              />
+            ) : null}
+            <Text numberOfLines={1} style={styles.title}>
+              {song.title}
+            </Text>
+          </View>
           <Text numberOfLines={1} style={styles.detail}>
             {detail}
           </Text>
           {song.tags.length > 0 ? (
             <Text numberOfLines={1} style={styles.tags}>
-              {song.tags.map((tag) => `#${tag}`).join('  ')}
+              {song.tags.map((tag) => `#${getTagLabel(tag)}`).join('  ')}
             </Text>
           ) : null}
         </View>
@@ -53,14 +66,11 @@ export function SongListItem({
         {isTrash ? (
           <ActionButton label="복원" onPress={() => onRestorePress(song)} />
         ) : (
-          <>
-            <ActionButton
-              emphasized={song.favorite}
-              label={song.favorite ? '★' : '☆'}
-              onPress={() => onFavoritePress(song)}
-            />
-            <ActionButton label="휴지통" onPress={() => onTrashPress(song)} />
-          </>
+          <ActionButton
+            emphasized={song.favorite}
+            label={song.favorite ? '★' : '☆'}
+            onPress={() => onFavoritePress(song)}
+          />
         )}
       </View>
     </View>
@@ -68,23 +78,32 @@ export function SongListItem({
 }
 
 interface ActionButtonProps {
+  accessibilityLabel?: string;
   emphasized?: boolean;
   label: string;
   onPress: () => void;
 }
 
 function ActionButton({
+  accessibilityLabel,
   emphasized = false,
   label,
   onPress,
 }: ActionButtonProps) {
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.action, pressed && styles.pressed]}
     >
-      <Text style={[styles.actionLabel, emphasized && styles.emphasizedAction]}>
+      <Text
+        style={[
+          styles.actionLabel,
+          (label === '★' || label === '☆') && styles.starAction,
+          emphasized && styles.emphasizedAction,
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -139,6 +158,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
+  titleRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   detail: {
     color: colors.muted,
     fontSize: 14,
@@ -159,6 +179,6 @@ const styles = StyleSheet.create({
   },
   emphasizedAction: {
     color: colors.accent,
-    fontSize: 19,
   },
+  starAction: { fontSize: 24 },
 });

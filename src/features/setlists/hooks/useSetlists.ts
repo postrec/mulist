@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { Setlist, SetlistSong, Song } from '../../../domain/models';
 import { getRepositories } from '../../../storage';
+import { reportError } from '../../../shared/logging/reportError';
 import { exportSetlistPdf } from '../services/exportSetlistPdf';
 
 export function useSetlists() {
@@ -22,6 +23,7 @@ export function useSetlists() {
       setSetlists(nextSetlists);
       setLibrarySongs(nextSongs);
     } catch (reason: unknown) {
+      reportError('셋리스트 불러오기 실패', reason);
       setError(
         reason instanceof Error
           ? reason.message
@@ -69,7 +71,11 @@ export function useSetlists() {
       changes: Partial<Pick<Setlist, 'eventDate' | 'eventName' | 'title'>>,
     ) => {
       if (!selected) return;
-      const updated = { ...selected, ...changes };
+      const updated = {
+        ...selected,
+        ...changes,
+        syncStatus: 'pending' as const,
+      };
       const { setlists: repository } = await getRepositories();
       await repository.save(updated);
       setSelected(updated);
@@ -121,6 +127,25 @@ export function useSetlists() {
     [replaceSongs, songs],
   );
 
+  const moveSongTo = useCallback(
+    async (index: number, destination: number) => {
+      if (
+        index < 0 ||
+        destination < 0 ||
+        index >= songs.length ||
+        destination >= songs.length ||
+        index === destination
+      )
+        return;
+      const next = [...songs];
+      const [moved] = next.splice(index, 1);
+      if (!moved) return;
+      next.splice(destination, 0, moved);
+      await replaceSongs(next);
+    },
+    [replaceSongs, songs],
+  );
+
   const exportPdf = useCallback(async () => {
     if (selected) await exportSetlistPdf(selected, songs);
   }, [selected, songs]);
@@ -132,6 +157,7 @@ export function useSetlists() {
     exportPdf,
     librarySongs,
     moveSong,
+    moveSongTo,
     remove,
     select,
     selected,

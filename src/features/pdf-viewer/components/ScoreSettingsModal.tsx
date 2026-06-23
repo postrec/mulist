@@ -8,18 +8,23 @@ import {
   Text,
   TextInput,
   View,
+  ScrollView,
 } from 'react-native';
 
 import type { Song } from '../../../domain/models';
 import { colors } from '../../../shared/theme/colors';
+import { reportError } from '../../../shared/logging/reportError';
+import { normalizeTagIds, tagPresets } from '../../../domain/tagPresets';
 
 export interface ScoreMetadata {
   artist: string;
   bpm: number | null;
   title: string;
+  tags: readonly string[];
 }
 
 interface ScoreSettingsModalProps {
+  heading?: string;
   onClose: () => void;
   onSave: (metadata: ScoreMetadata) => Promise<void>;
   song: Song;
@@ -27,6 +32,7 @@ interface ScoreSettingsModalProps {
 }
 
 export function ScoreSettingsModal({
+  heading = '악보 설정',
   onClose,
   onSave,
   song,
@@ -37,6 +43,9 @@ export function ScoreSettingsModal({
   const [bpm, setBpm] = useState(song.bpm === null ? '' : String(song.bpm));
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [tags, setTags] = useState<readonly string[]>(
+    normalizeTagIds(song.tags),
+  );
 
   useEffect(() => {
     if (!visible) return;
@@ -44,6 +53,7 @@ export function ScoreSettingsModal({
     setArtist(song.artist);
     setBpm(song.bpm === null ? '' : String(song.bpm));
     setError(null);
+    setTags(normalizeTagIds(song.tags));
   }, [song, visible]);
 
   const save = async () => {
@@ -68,9 +78,11 @@ export function ScoreSettingsModal({
         artist: artist.trim(),
         bpm: parsedBpm,
         title: trimmedTitle,
+        tags,
       });
       onClose();
     } catch (saveError: unknown) {
+      reportError('곡 정보 저장 실패', saveError);
       setError(
         saveError instanceof Error ? saveError.message : '저장하지 못했습니다.',
       );
@@ -91,35 +103,65 @@ export function ScoreSettingsModal({
         style={styles.backdrop}
       >
         <View style={styles.card}>
-          <Text style={styles.heading}>악보 설정</Text>
-          <Field label="제목" onChangeText={setTitle} value={title} />
-          <Field label="가수" onChangeText={setArtist} value={artist} />
-          <Field
-            keyboardType="number-pad"
-            label="BPM (30~300)"
-            onChangeText={setBpm}
-            placeholder="미설정"
-            value={bpm}
-          />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <View style={styles.actions}>
-            <Pressable
-              disabled={isSaving}
-              onPress={onClose}
-              style={styles.secondaryButton}
-            >
-              <Text style={styles.secondaryLabel}>취소</Text>
-            </Pressable>
-            <Pressable
-              disabled={isSaving}
-              onPress={() => void save()}
-              style={styles.primaryButton}
-            >
-              <Text style={styles.primaryLabel}>
-                {isSaving ? '저장 중…' : '저장'}
-              </Text>
-            </Pressable>
-          </View>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.heading}>{heading}</Text>
+            <Field label="제목" onChangeText={setTitle} value={title} />
+            <Field label="가수" onChangeText={setArtist} value={artist} />
+            <Field
+              keyboardType="number-pad"
+              label="BPM (30~300)"
+              onChangeText={setBpm}
+              placeholder="미설정"
+              value={bpm}
+            />
+            <Text style={styles.fieldLabel}>태그</Text>
+            <View style={styles.tags}>
+              {tagPresets.map((preset) => {
+                const selected = tags.includes(preset.id);
+                return (
+                  <Pressable
+                    key={preset.id}
+                    onPress={() =>
+                      setTags((current) =>
+                        selected
+                          ? current.filter((tag) => tag !== preset.id)
+                          : [...current, preset.id],
+                      )
+                    }
+                    style={[styles.tag, selected && styles.selectedTag]}
+                  >
+                    <Text
+                      style={[
+                        styles.tagLabel,
+                        selected && styles.selectedTagLabel,
+                      ]}
+                    >
+                      {preset.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <View style={styles.actions}>
+              <Pressable
+                disabled={isSaving}
+                onPress={onClose}
+                style={styles.secondaryButton}
+              >
+                <Text style={styles.secondaryLabel}>취소</Text>
+              </Pressable>
+              <Pressable
+                disabled={isSaving}
+                onPress={() => void save()}
+                style={styles.primaryButton}
+              >
+                <Text style={styles.primaryLabel}>
+                  {isSaving ? '저장 중…' : '저장'}
+                </Text>
+              </Pressable>
+            </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -171,6 +213,7 @@ const styles = StyleSheet.create({
     maxWidth: 460,
     padding: 22,
     width: '100%',
+    maxHeight: '90%',
   },
   heading: {
     color: colors.text,
@@ -209,4 +252,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   primaryLabel: { color: colors.surface, fontWeight: '800' },
+  tags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+    marginBottom: 14,
+    marginTop: 7,
+  },
+  tag: {
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  selectedTag: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tagLabel: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  selectedTagLabel: { color: colors.surface },
 });

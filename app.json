@@ -2,6 +2,7 @@
   "expo": {
     "name": "MuList",
     "slug": "mulist",
+    "scheme": "mulist",
     "version": "0.1.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -16,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.mulist.app",
       "buildNumber": "1",
+      "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
@@ -32,6 +34,12 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-audio", "expo-sqlite", "expo-asset"]
+    "plugins": [
+      "expo-audio",
+      "expo-sqlite",
+      "expo-asset",
+      "expo-web-browser",
+      "expo-apple-authentication"
+    ]
   }
 }

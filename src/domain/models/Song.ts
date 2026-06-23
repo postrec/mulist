@@ -9,4 +9,10 @@ export interface Song {
   favorite: boolean;
   createdAt: string;
   updatedAt: string;
+  ownerId?: string | null;
+  deviceId?: string | null;
+  revision?: number;
+  serverUpdatedAt?: string | null;
+  syncStatus?: 'local' | 'pending' | 'synced' | 'failed';
+  deletedAt?: string | null;
 }

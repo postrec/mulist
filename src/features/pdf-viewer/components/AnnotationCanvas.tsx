@@ -1,5 +1,5 @@
 import { randomUUID } from 'expo-crypto';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Alert,
   type LayoutChangeEvent,
@@ -20,6 +20,7 @@ import type {
 export type AnnotationTool = StrokeTool | 'eraser' | 'text';
 
 interface AnnotationCanvasProps {
+  inputEnabled?: boolean;
   noteLayer: NoteLayer;
   onChange: (noteLayer: NoteLayer) => void;
   tool: AnnotationTool;
@@ -31,6 +32,7 @@ interface CanvasSize {
 }
 
 export function AnnotationCanvas({
+  inputEnabled = true,
   noteLayer,
   onChange,
   tool,
@@ -39,6 +41,8 @@ export function AnnotationCanvas({
   const [activeStroke, setActiveStroke] = useState<AnnotationStroke | null>(
     null,
   );
+  const activePointer = useRef<number | null>(null);
+  const pencilActive = useRef(false);
 
   const handleLayout = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
@@ -46,6 +50,10 @@ export function AnnotationCanvas({
   };
 
   const handlePointerDown = (event: PointerEvent) => {
+    const isPencil = event.nativeEvent.pointerType === 'pen';
+    if (pencilActive.current && !isPencil) return;
+    activePointer.current = event.nativeEvent.pointerId;
+    pencilActive.current = isPencil;
     const point = toPoint(event, size);
     if (tool === 'eraser') {
       eraseAt(point, noteLayer, onChange);
@@ -61,14 +69,25 @@ export function AnnotationCanvas({
       opacity: tool === 'highlighter' ? 0.35 : 1,
       points: [point],
       tool,
-      width: tool === 'highlighter' ? 18 : 3,
+      width:
+        tool === 'highlighter' ? 18 : pressureWidth(point.pressure, isPencil),
     });
   };
 
   const handlePointerMove = (event: PointerEvent) => {
+    if (event.nativeEvent.pointerId !== activePointer.current) return;
     const point = toPoint(event, size);
     setActiveStroke((stroke) =>
-      stroke ? { ...stroke, points: [...stroke.points, point] } : null,
+      stroke
+        ? {
+            ...stroke,
+            points: appendPoint(stroke.points, point),
+            width:
+              stroke.tool === 'pen'
+                ? stroke.width * 0.8 + pressureWidth(point.pressure, true) * 0.2
+                : stroke.width,
+          }
+        : null,
     );
   };
 
@@ -78,6 +97,8 @@ export function AnnotationCanvas({
         onChange({ ...noteLayer, strokes: [...noteLayer.strokes, stroke] });
       return null;
     });
+    activePointer.current = null;
+    pencilActive.current = false;
   };
 
   const strokes = activeStroke
@@ -89,7 +110,9 @@ export function AnnotationCanvas({
       onLayout={handleLayout}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
+      onPointerCancel={handlePointerUp}
       onPointerUp={handlePointerUp}
+      pointerEvents={inputEnabled ? 'auto' : 'none'}
       style={styles.canvas}
     >
       <Svg height="100%" pointerEvents="none" width="100%">
@@ -133,13 +156,39 @@ function toPoint(event: PointerEvent, size: CanvasSize): AnnotationPoint {
   };
 }
 
+function pressureWidth(pressure: number, isPencil: boolean): number {
+  if (!isPencil) return 3;
+  return 1.5 + Math.max(0.05, Math.min(1, pressure)) * 4.5;
+}
+
+function appendPoint(
+  points: readonly AnnotationPoint[],
+  point: AnnotationPoint,
+): readonly AnnotationPoint[] {
+  const previous = points.at(-1);
+  if (
+    previous &&
+    Math.hypot(previous.x - point.x, previous.y - point.y) < 0.001
+  ) {
+    return points;
+  }
+  return [...points, point];
+}
+
 function toPath(points: readonly AnnotationPoint[], size: CanvasSize): string {
-  return points
-    .map(
-      (point, index) =>
-        `${index === 0 ? 'M' : 'L'} ${point.x * size.width} ${point.y * size.height}`,
-    )
-    .join(' ');
+  if (points.length === 0) return '';
+  const first = points[0]!;
+  if (points.length === 1)
+    return `M ${first.x * size.width} ${first.y * size.height}`;
+  const commands = [`M ${first.x * size.width} ${first.y * size.height}`];
+  for (let index = 1; index < points.length; index += 1) {
+    const current = points[index]!;
+    const next = points[index + 1] ?? current;
+    commands.push(
+      `Q ${current.x * size.width} ${current.y * size.height} ${((current.x + next.x) / 2) * size.width} ${((current.y + next.y) / 2) * size.height}`,
+    );
+  }
+  return commands.join(' ');
 }
 
 function eraseAt(

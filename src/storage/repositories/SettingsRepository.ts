@@ -15,7 +15,17 @@ export class SettingsRepository {
     if (!row) return defaultAppSettings;
     try {
       const saved = JSON.parse(row.settings_json) as Partial<AppSettings>;
-      return { ...defaultAppSettings, ...saved };
+      return {
+        ...defaultAppSettings,
+        ...saved,
+        applePencilSmoothing: normalizePencilSmoothing(
+          saved.applePencilSmoothing,
+        ),
+        language: normalizeLanguage(saved.language),
+        defaultNavigationMode: normalizeNavigationMode(
+          saved.defaultNavigationMode,
+        ),
+      };
     } catch {
       return defaultAppSettings;
     }
@@ -28,4 +38,27 @@ export class SettingsRepository {
       JSON.stringify(settings),
     );
   }
+}
+
+function normalizePencilSmoothing(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return defaultAppSettings.applePencilSmoothing;
+  }
+  return Math.max(0, Math.min(10, Math.round(value)));
+}
+
+function normalizeNavigationMode(
+  value: AppSettings['defaultNavigationMode'] | undefined,
+): AppSettings['defaultNavigationMode'] {
+  return value === 'snap' ||
+    value === 'snap-horizontal' ||
+    value === 'snap-horizontal-page'
+    ? value
+    : 'scroll';
+}
+
+function normalizeLanguage(
+  value: AppSettings['language'] | undefined,
+): AppSettings['language'] {
+  return value === 'en' || value === 'ja' || value === 'ko' ? value : 'ko';
 }

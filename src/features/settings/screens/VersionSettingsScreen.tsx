@@ -1,5 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
 import { getAppDiagnostics } from '../services/appDiagnostics';
 
@@ -13,32 +15,35 @@ const licenses = [
 ];
 
 export function VersionSettingsScreen() {
+  useAppLanguage();
   const diagnostics = getAppDiagnostics();
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.hero}>
         <Text style={styles.appName}>MuList</Text>
-        <Text style={styles.version}>Version {diagnostics.appVersion}</Text>
-        <Text style={styles.build}>Build {diagnostics.buildNumber}</Text>
+        <Text style={styles.version}>
+          {t('version.releaseNotes')} {diagnostics.appVersion}
+        </Text>
+        <Text style={styles.build}>
+          {t('version.build')} {diagnostics.buildNumber}
+        </Text>
       </View>
-      <InfoSection title="Release Notes">
+      <InfoSection title={t('version.releaseNotes')}>
         <Text style={styles.body}>0.1.0 MVP</Text>
         <Text style={styles.body}>
           Song 중심 PDF 라이브러리, 주석, 검색, 셋리스트, 음악 도구와 Firebase
           기반을 추가했습니다.
         </Text>
       </InfoSection>
-      <InfoSection title="Open Source Licenses">
+      <InfoSection title={t('version.openSourceLicenses')}>
         {licenses.map((license) => (
           <Text key={license} style={styles.body}>
             {license}
           </Text>
         ))}
       </InfoSection>
-      <InfoSection title="Legal">
-        <Text style={styles.unavailable}>
-          Terms of Service와 Privacy Policy는 공개 URL 확정 후 연결됩니다.
-        </Text>
+      <InfoSection title={t('version.legal')}>
+        <Text style={styles.unavailable}>{t('version.unavailable')}</Text>
       </InfoSection>
     </ScrollView>
   );

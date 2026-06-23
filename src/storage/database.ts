@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 const DATABASE_NAME = 'mulist.db';
-const DATABASE_VERSION = 5;
+const DATABASE_VERSION = 8;
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -37,9 +37,75 @@ async function openDatabase(): Promise<SQLite.SQLiteDatabase> {
     if (currentVersion < 5) {
       await migrateToVersionFive(database);
     }
+    if (currentVersion < 6) {
+      await migrateToVersionSix(database);
+    }
+    if (currentVersion < 7) await migrateToVersionSeven(database);
+    if (currentVersion < 8) await migrateToVersionEight(database);
   }
 
   return database;
+}
+
+async function migrateToVersionEight(database: SQLite.SQLiteDatabase) {
+  await database.withTransactionAsync(async () => {
+    await database.execAsync(`
+      CREATE TABLE teams (
+        id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, owner_id TEXT NOT NULL,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      );
+      CREATE TABLE team_members (
+        team_id TEXT NOT NULL, uid TEXT NOT NULL, email TEXT, display_name TEXT,
+        role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'editor', 'viewer')),
+        joined_at TEXT NOT NULL, PRIMARY KEY (team_id, uid),
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+      );
+      CREATE TABLE sync_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, level TEXT NOT NULL,
+        message TEXT NOT NULL, created_at TEXT NOT NULL
+      );
+      CREATE INDEX team_members_uid_idx ON team_members(uid);
+      CREATE INDEX sync_logs_created_at_idx ON sync_logs(created_at DESC);
+      PRAGMA user_version = 8;
+    `);
+  });
+}
+
+async function migrateToVersionSeven(database: SQLite.SQLiteDatabase) {
+  await database.withTransactionAsync(async () => {
+    await database.execAsync(`
+      ALTER TABLE songs ADD COLUMN owner_id TEXT;
+      ALTER TABLE songs ADD COLUMN device_id TEXT;
+      ALTER TABLE songs ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE songs ADD COLUMN server_updated_at TEXT;
+      ALTER TABLE songs ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'local';
+      ALTER TABLE setlists ADD COLUMN owner_id TEXT;
+      ALTER TABLE setlists ADD COLUMN device_id TEXT;
+      ALTER TABLE setlists ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE setlists ADD COLUMN server_updated_at TEXT;
+      ALTER TABLE setlists ADD COLUMN sync_status TEXT NOT NULL DEFAULT 'local';
+      ALTER TABLE setlists ADD COLUMN deleted_at TEXT;
+      CREATE TABLE sync_queue (
+        id TEXT PRIMARY KEY NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,
+        operation TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+        next_attempt_at TEXT NOT NULL, last_error TEXT, created_at TEXT NOT NULL,
+        UNIQUE(entity_type, entity_id, operation)
+      );
+      CREATE INDEX sync_queue_due_idx ON sync_queue(next_attempt_at, attempts);
+      PRAGMA user_version = 7;
+    `);
+  });
+}
+
+async function migrateToVersionSix(database: SQLite.SQLiteDatabase) {
+  await database.withTransactionAsync(async () => {
+    await database.execAsync(`
+      ALTER TABLE scores ADD COLUMN viewer_layout TEXT NOT NULL DEFAULT 'single';
+      ALTER TABLE scores ADD COLUMN viewer_navigation TEXT NOT NULL DEFAULT 'scroll';
+      ALTER TABLE scores ADD COLUMN viewer_page INTEGER NOT NULL DEFAULT 1;
+      PRAGMA user_version = 6;
+    `);
+  });
 }
 
 async function migrateToVersionFive(database: SQLite.SQLiteDatabase) {

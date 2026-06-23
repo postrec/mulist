@@ -2,16 +2,19 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Song } from '../../../domain/models';
 import { FilterChip } from '../../../shared/components/FilterChip';
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
+import { SCREEN_HEADER_HEIGHT } from '../../../shared/layout/metrics';
 import { SongListItem } from '../../library/components/SongListItem';
 import { useSongSearch } from '../hooks/useSongSearch';
 import type { SearchScope } from '../types';
@@ -21,31 +24,32 @@ interface SearchScreenProps {
   onSongPress: (song: Song) => void;
 }
 
-const scopes: readonly { label: string; value: SearchScope }[] = [
-  { label: '전체', value: 'all' },
-  { label: '제목', value: 'title' },
-  { label: '아티스트', value: 'artist' },
-  { label: '태그', value: 'tag' },
-  { label: 'OCR', value: 'ocr' },
-];
 const doNothing = () => undefined;
 
 export function SearchScreen({ onBack, onSongPress }: SearchScreenProps) {
+  useAppLanguage();
   const search = useSongSearch();
+  const scopes: readonly { label: string; value: SearchScope }[] = [
+    { label: t('search.all'), value: 'all' },
+    { label: t('search.titleScope'), value: 'title' },
+    { label: t('search.artist'), value: 'artist' },
+    { label: t('search.tag'), value: 'tag' },
+    { label: t('search.ocr'), value: 'ocr' },
+  ];
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Pressable accessibilityRole="button" onPress={onBack}>
-            <Text style={styles.back}>‹ 라이브러리</Text>
+            <Text style={styles.back}>{t('common.backToLibrary')}</Text>
           </Pressable>
-          <Text style={styles.title}>검색</Text>
+          <Text style={styles.title}>{t('search.title')}</Text>
           <View style={styles.spacer} />
         </View>
         <TextInput
           autoFocus
           onChangeText={search.setQuery}
-          placeholder="곡, 아티스트, 태그, 악보 내용 검색"
+          placeholder={t('search.placeholder')}
           placeholderTextColor={colors.muted}
           style={styles.input}
           value={search.query}
@@ -72,8 +76,8 @@ export function SearchScreen({ onBack, onSongPress }: SearchScreenProps) {
             ListEmptyComponent={
               <Text style={styles.empty}>
                 {search.query
-                  ? '검색 결과가 없습니다.'
-                  : '검색어를 입력하세요.'}
+                  ? t('search.emptyResults')
+                  : t('search.emptyQuery')}
               </Text>
             }
             renderItem={({ item }) => (
@@ -81,7 +85,6 @@ export function SearchScreen({ onBack, onSongPress }: SearchScreenProps) {
                 onFavoritePress={doNothing}
                 onPress={onSongPress}
                 onRestorePress={doNothing}
-                onTrashPress={doNothing}
                 song={item}
               />
             )}
@@ -104,11 +107,11 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     flexDirection: 'row',
+    height: SCREEN_HEADER_HEIGHT,
     justifyContent: 'space-between',
-    paddingVertical: 22,
   },
   back: { color: colors.primary, fontSize: 15, fontWeight: '700', width: 120 },
-  title: { color: colors.text, fontSize: 24, fontWeight: '800' },
+  title: { color: colors.text, fontSize: 20, fontWeight: '800' },
   spacer: { width: 120 },
   input: {
     backgroundColor: colors.surface,

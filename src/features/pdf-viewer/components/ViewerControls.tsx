@@ -1,8 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
+import type { ScorePageLayout } from '../../../domain/models';
 
-export type PageLayout = 'single' | 'two-page';
+export type PageLayout = ScorePageLayout;
 
 interface ViewerControlsProps {
   layout: PageLayout;
@@ -21,20 +24,21 @@ export function ViewerControls({
   onZoomOut,
   zoom,
 }: ViewerControlsProps) {
+  useAppLanguage();
   return (
     <View style={styles.container}>
       <Pressable
-        accessibilityLabel="축소"
+        accessibilityLabel={t('viewer.zoomOut')}
         onPress={onZoomOut}
         style={styles.button}
       >
         <Text style={styles.symbol}>−</Text>
       </Pressable>
-      <Text accessibilityLabel={`확대 비율 ${zoom}%`} style={styles.zoom}>
+      <Text accessibilityLabel={`${zoom}%`} style={styles.zoom}>
         {zoom}%
       </Text>
       <Pressable
-        accessibilityLabel="확대"
+        accessibilityLabel={t('viewer.zoomIn')}
         onPress={onZoomIn}
         style={styles.button}
       >
@@ -53,7 +57,7 @@ export function ViewerControls({
         <Text
           style={[styles.label, layout === 'two-page' && styles.activeLabel]}
         >
-          {layout === 'single' ? '1쪽' : '2쪽'}
+          {layout === 'single' ? t('viewer.singlePage') : t('viewer.twoPage')}
         </Text>
       </Pressable>
       <Pressable
@@ -61,7 +65,7 @@ export function ViewerControls({
         onPress={onOpenSettings}
         style={styles.wideButton}
       >
-        <Text style={styles.label}>악보 설정</Text>
+        <Text style={styles.label}>{t('viewer.scoreSettings')}</Text>
       </Pressable>
     </View>
   );

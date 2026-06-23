@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MuList 악보 공유</title>
+    <style>
+      body { margin: 0; background: #f7f5ef; color: #24231f; font-family: -apple-system, sans-serif; }
+      main { max-width: 520px; margin: 12vh auto; padding: 28px; text-align: center; }
+      a { display: block; margin-top: 28px; padding: 15px; border-radius: 12px; background: #345c52; color: white; text-decoration: none; font-weight: 700; }
+      p { color: #69665e; line-height: 1.6; }
+    </style>
+  </head>
+  <body>
+    <main><h1>MuList 악보 공유</h1><p>이 링크는 생성 후 3일 동안 사용할 수 있습니다.</p><a id="open">MuList에서 열기</a></main>
+    <script>
+      const id = location.pathname.split('/').filter(Boolean).pop();
+      document.getElementById('open').href = `mulist://share/${encodeURIComponent(id || '')}`;
+    </script>
+  </body>
+</html>

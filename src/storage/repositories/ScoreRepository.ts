@@ -10,30 +10,47 @@ interface ScoreRow {
   pdf_file: string;
   note_layer_json: string | null;
   ocr_data_json: string | null;
+  viewer_layout: string;
+  viewer_navigation: string;
+  viewer_page: number;
 }
 
 export class ScoreRepository {
   public constructor(private readonly database: SQLiteDatabase) {}
 
-  public async save(score: Score): Promise<void> {
+  public async save(score: Score, markSongPending = true): Promise<void> {
     await this.database.runAsync(
       `INSERT INTO scores (
-         id, song_id, pdf_file, note_layer_json, ocr_data_json, content_hash
-       ) VALUES (?, ?, ?, ?, ?, ?)
+         id, song_id, pdf_file, note_layer_json, ocr_data_json, content_hash,
+         viewer_layout, viewer_navigation, viewer_page
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          song_id = excluded.song_id,
          pdf_file = excluded.pdf_file,
          note_layer_json = excluded.note_layer_json,
          ocr_data_json = excluded.ocr_data_json,
-         content_hash = excluded.content_hash`,
+         content_hash = excluded.content_hash,
+         viewer_layout = excluded.viewer_layout,
+         viewer_navigation = excluded.viewer_navigation,
+         viewer_page = excluded.viewer_page`,
       score.id,
       score.songId,
       score.pdfFile,
       score.noteLayer ? JSON.stringify(score.noteLayer) : null,
       score.ocrData ? JSON.stringify(score.ocrData) : null,
       score.contentHash,
+      score.viewState.layout,
+      score.viewState.navigationMode,
+      score.viewState.currentPage,
     );
     await this.updateSearchIndex(score.songId);
+    if (markSongPending) {
+      await this.database.runAsync(
+        "UPDATE songs SET sync_status = 'pending', updated_at = ? WHERE id = ?",
+        new Date().toISOString(),
+        score.songId,
+      );
+    }
   }
 
   public async findById(id: string): Promise<Score | null> {
@@ -97,5 +114,23 @@ function toScore(row: ScoreRow): Score {
     pdfFile: row.pdf_file,
     noteLayer: parseJson<NoteLayer>(row.note_layer_json),
     ocrData: parseJson<OcrData>(row.ocr_data_json),
+    viewState: {
+      currentPage: Math.max(1, row.viewer_page),
+      layout: row.viewer_layout === 'two-page' ? 'two-page' : 'single',
+      navigationMode: normalizeNavigationMode(row.viewer_navigation),
+    },
   };
+}
+
+function normalizeNavigationMode(
+  value: string,
+): Score['viewState']['navigationMode'] {
+  if (
+    value === 'snap' ||
+    value === 'snap-horizontal' ||
+    value === 'snap-horizontal-page'
+  )
+    return value;
+  if (value === 'swipe') return 'snap-horizontal';
+  return 'scroll';
 }

@@ -12,6 +12,7 @@ export interface AnnotationStroke {
   color: string;
   id: string;
   opacity: number;
+  page?: number;
   points: readonly AnnotationPoint[];
   tool: StrokeTool;
   width: number;
@@ -20,6 +21,7 @@ export interface AnnotationStroke {
 export interface TextAnnotation {
   color: string;
   id: string;
+  page?: number;
   text: string;
   x: number;
   y: number;
@@ -36,6 +38,19 @@ export interface OcrData {
   languages: readonly OcrLanguage[];
 }
 
+export type ScorePageLayout = 'single' | 'two-page';
+export type ScoreNavigationMode =
+  | 'scroll'
+  | 'snap'
+  | 'snap-horizontal'
+  | 'snap-horizontal-page';
+
+export interface ScoreViewState {
+  currentPage: number;
+  layout: ScorePageLayout;
+  navigationMode: ScoreNavigationMode;
+}
+
 export interface Score {
   contentHash: string | null;
   id: string;
@@ -43,4 +58,5 @@ export interface Score {
   pdfFile: string;
   noteLayer: NoteLayer | null;
   ocrData: OcrData | null;
+  viewState: ScoreViewState;
 }

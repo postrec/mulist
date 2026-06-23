@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
 
 interface LibraryEmptyStateProps {
@@ -10,11 +12,12 @@ interface LibraryEmptyStateProps {
 }
 
 export function LibraryEmptyState({
-  actionLabel = 'PDF 가져오기',
+  actionLabel = t('library.importPdf'),
   description = 'PDF 악보를 가져오면 곡 중심으로 정리할 수 있어요.',
   onActionPress,
   title = '첫 곡을 추가해 보세요',
 }: LibraryEmptyStateProps) {
+  useAppLanguage();
   return (
     <View style={styles.container}>
       <View style={styles.icon}>

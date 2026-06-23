@@ -4,6 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import type { Score, Song } from '../../../domain/models';
 import { getRepositories } from '../../../storage';
+import { reportError } from '../../../shared/logging/reportError';
 import {
   createSongPackage,
   deleteSongPackage,
@@ -71,6 +72,7 @@ async function importPdfAsset(
   }
 
   const repositories = await getRepositories();
+  const settings = await repositories.settings.get();
   const duplicate = await repositories.scores.findByContentHash(fileInfo.md5);
   if (duplicate) {
     return 'duplicate';
@@ -101,12 +103,18 @@ async function importPdfAsset(
       pdfFile,
       noteLayer: null,
       ocrData: null,
+      viewState: {
+        currentPage: 1,
+        layout: settings.defaultPageLayout,
+        navigationMode: settings.defaultNavigationMode,
+      },
     };
     await repositories.songs.save(song);
     await repositories.scores.save(score);
     await repositories.ocr.enqueue(score.id);
     return 'imported';
   } catch (error: unknown) {
+    reportError(`PDF 파일 가져오기 실패: ${asset.name}`, error);
     await repositories.songs.remove(songId).catch(() => undefined);
     await deleteSongPackage(songId).catch(() => undefined);
     throw error;

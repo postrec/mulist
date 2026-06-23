@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Share } from 'react-native';
 
 import type { Song } from '../../../domain/models';
 import { getRepositories } from '../../../storage';
+import { reportError } from '../../../shared/logging/reportError';
 import { deleteSongPackage } from '../../../storage/songPackageFiles';
 import { pickAndImportPdfFiles } from '../../import/services/importPdfFiles';
+import { syncSongNow } from '../../cloud/services/syncWorker';
+import { createThreeDayShare } from '../../cloud/services/sharingService';
+import type { ScoreMetadata } from '../../pdf-viewer/components/ScoreSettingsModal';
 import type { LibraryView } from '../types';
 
 interface LibraryState {
@@ -60,6 +65,7 @@ export function useLibrary() {
           }));
         }
       } catch (error: unknown) {
+        reportError('라이브러리 불러오기 실패', error);
         if (currentRequest === requestId.current) {
           setState((current) => ({
             ...current,
@@ -99,6 +105,7 @@ export function useLibrary() {
         await operation(songs);
         await load(state.view, state.selectedTag);
       } catch (error: unknown) {
+        reportError('라이브러리 변경 저장 실패', error);
         setState((current) => ({
           ...current,
           error:
@@ -134,6 +141,83 @@ export function useLibrary() {
     [runMutation],
   );
 
+  const updateMetadata = useCallback(
+    async (song: Song, metadata: ScoreMetadata) => {
+      await runMutation((repository) =>
+        repository.save({
+          ...song,
+          ...metadata,
+          syncStatus: 'pending',
+          updatedAt: new Date().toISOString(),
+        }),
+      );
+    },
+    [runMutation],
+  );
+
+  const syncSong = useCallback(
+    async (song: Song) => {
+      setState((current) => ({
+        ...current,
+        error: null,
+        notice: `${song.title} 동기화 중…`,
+      }));
+      try {
+        await syncSongNow(song.id);
+        setState((current) => ({
+          ...current,
+          notice: `${song.title} 동기화를 완료했습니다.`,
+        }));
+        await load(state.view, state.selectedTag);
+      } catch (error: unknown) {
+        reportError(`곡 동기화 실패: ${song.id}`, error);
+        setState((current) => ({
+          ...current,
+          error:
+            error instanceof Error
+              ? error.message
+              : '곡을 동기화하지 못했습니다.',
+          notice: null,
+        }));
+      }
+    },
+    [load, state.selectedTag, state.view],
+  );
+
+  const shareSong = useCallback(async (song: Song) => {
+    setState((current) => ({
+      ...current,
+      error: null,
+      notice: `${song.title} 공유 준비 중…`,
+    }));
+    try {
+      if (song.syncStatus !== 'synced') {
+        setState((current) => ({
+          ...current,
+          notice: `${song.title} 동기화 후 공유 링크를 만드는 중…`,
+        }));
+        await syncSongNow(song.id);
+      }
+      const share = await createThreeDayShare(song.id);
+      await Share.share({
+        message: `${song.title}\n${share.url}`,
+        title: song.title,
+      });
+      setState((current) => ({
+        ...current,
+        notice: '3일 동안 사용할 수 있는 공유 링크를 만들었습니다.',
+      }));
+    } catch (error: unknown) {
+      reportError(`곡 공유 실패: ${song.id}`, error);
+      setState((current) => ({
+        ...current,
+        error:
+          error instanceof Error ? error.message : '곡을 공유하지 못했습니다.',
+        notice: null,
+      }));
+    }
+  }, []);
+
   const importPdfs = useCallback(async () => {
     setState((current) => ({
       ...current,
@@ -156,6 +240,7 @@ export function useLibrary() {
         await load(state.view, state.selectedTag);
       }
     } catch (error: unknown) {
+      reportError('PDF 가져오기 실패', error);
       setState((current) => ({
         ...current,
         error:
@@ -174,7 +259,10 @@ export function useLibrary() {
     restore,
     selectTag,
     selectView,
+    shareSong,
+    syncSong,
     toggleFavorite,
+    updateMetadata,
   };
 }
 

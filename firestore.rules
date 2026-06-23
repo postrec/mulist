@@ -2,8 +2,49 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+    function signedIn() { return request.auth != null; }
+    function owns(uid) { return signedIn() && request.auth.uid == uid; }
+    function teamMember(teamId) {
+      return signedIn() && exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid));
     }
+    function teamEditor(teamId) {
+      return teamMember(teamId) && get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role in ['owner', 'admin', 'editor'];
+    }
+    function teamAdmin(teamId) {
+      return teamMember(teamId) && get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role in ['owner', 'admin'];
+    }
+
+    match /users/{uid} {
+      allow read, create, update, delete: if owns(uid);
+      match /{document=**} { allow read, write: if owns(uid); }
+    }
+    match /shares/{shareId} {
+      allow read: if signedIn() && resource.data.expiresAt > request.time;
+      allow write: if false;
+    }
+    match /teams/{teamId} {
+      allow read: if teamMember(teamId);
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if teamAdmin(teamId);
+      match /members/{uid} {
+        allow read: if teamMember(teamId);
+        allow create: if teamAdmin(teamId) || (signedIn() && uid == request.auth.uid && get(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid && request.resource.data.role == 'owner');
+        allow update, delete: if teamAdmin(teamId);
+      }
+      match /songs/{songId} { allow read: if teamMember(teamId); allow write: if teamEditor(teamId); }
+      match /setlists/{setlistId} { allow read: if teamMember(teamId); allow write: if teamEditor(teamId); }
+      match /invites/{inviteId} { allow read, write: if teamAdmin(teamId); }
+    }
+    match /entitlements/{uid} { allow read: if owns(uid); allow write: if false; }
+    match /sharedSetlists/{setlistId} {
+      allow read: if signedIn() && exists(/databases/$(database)/documents/sharedSetlists/$(setlistId)/members/$(request.auth.uid));
+      allow write: if false;
+      match /members/{uid} {
+        allow read: if signedIn() && exists(/databases/$(database)/documents/sharedSetlists/$(setlistId)/members/$(request.auth.uid));
+        allow write: if false;
+      }
+    }
+    match /redeemCodes/{document=**} { allow read, write: if false; }
+    match /redeemAttempts/{uid} { allow read, write: if false; }
   }
 }

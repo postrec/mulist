@@ -1,4 +1,5 @@
 export type SettingsRoute =
+  | 'language'
   | 'display'
   | 'account'
   | 'subscription'

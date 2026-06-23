@@ -2,42 +2,84 @@ import {
   Alert,
   FlatList,
   Pressable,
-  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
 
-import type { Setlist } from '../../../domain/models';
+import type { Setlist, Song } from '../../../domain/models';
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
+import { SCREEN_HEADER_HEIGHT } from '../../../shared/layout/metrics';
 import { useSetlists } from '../hooks/useSetlists';
+import { SetlistScorePreview } from '../components/SetlistScorePreview';
+import { SetlistSongRow } from '../components/SetlistSongRow';
+import { SetlistMembersModal } from '../components/SetlistMembersModal';
 
 interface SetlistsScreenProps {
+  initialSetlistId?: string;
+  initialSong?: Song | null;
   onBack: () => void;
+  onOpenViewer: (song: Song, setlist: Setlist, songs: readonly Song[]) => void;
 }
 
-export function SetlistsScreen({ onBack }: SetlistsScreenProps) {
+export function SetlistsScreen({
+  initialSetlistId,
+  initialSong = null,
+  onBack,
+  onOpenViewer,
+}: SetlistsScreenProps) {
+  useAppLanguage();
   const state = useSetlists();
-  const available = state.librarySongs.filter(
-    (song) => !state.songs.some((item) => item.id === song.id),
-  );
+  const selectedSetlist = state.selected;
+  const selectSetlist = state.select;
+  const setlists = state.setlists;
+  const [previewSong, setPreviewSong] = useState<Song | null>(initialSong);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [libraryQuery, setLibraryQuery] = useState('');
+  const [membersOpen, setMembersOpen] = useState(false);
+  const normalizedQuery = libraryQuery.trim().toLocaleLowerCase();
+  const available = normalizedQuery
+    ? state.librarySongs.filter(
+        (song) =>
+          !state.songs.some((item) => item.id === song.id) &&
+          [song.title, song.artist, ...song.tags].some((value) =>
+            value.toLocaleLowerCase().includes(normalizedQuery),
+          ),
+      )
+    : [];
+
+  useEffect(() => {
+    if (!initialSetlistId || selectedSetlist) return;
+    const initial = setlists.find((item) => item.id === initialSetlistId);
+    if (initial) void selectSetlist(initial);
+  }, [initialSetlistId, selectedSetlist, selectSetlist, setlists]);
   const promptCreate = () =>
     Alert.prompt(
-      '새 셋리스트',
-      '셋리스트 이름을 입력하세요.',
+      t('setlists.create'),
+      t('setlists.createPrompt'),
       (title) => title.trim() && void state.create(title.trim()),
     );
-  const promptUpdate = () =>
-    Alert.prompt(
-      '이름 수정',
-      undefined,
-      (title) => title.trim() && void state.update({ title: title.trim() }),
-      'plain-text',
-      state.selected?.title,
-    );
+  const toggleEdit = async () => {
+    if (!state.selected) return;
+    if (!isEditing) {
+      setDraftTitle(state.selected.title);
+      setIsEditing(true);
+      return;
+    }
+    const title = draftTitle.trim();
+    if (title && title !== state.selected.title) await state.update({ title });
+    setIsEditing(false);
+  };
   const promptEvent = () =>
     Alert.prompt(
-      '행사명 수정',
+      t('setlists.editEventName'),
       undefined,
       (eventName) => void state.update({ eventName: eventName.trim() }),
       'plain-text',
@@ -45,19 +87,19 @@ export function SetlistsScreen({ onBack }: SetlistsScreenProps) {
     );
   const promptDate = () =>
     Alert.prompt(
-      '날짜 수정',
-      'YYYY-MM-DD',
+      t('setlists.editDate'),
+      t('setlists.renameDatePrompt'),
       (eventDate) =>
         eventDate.trim() && void state.update({ eventDate: eventDate.trim() }),
       'plain-text',
       state.selected?.eventDate,
     );
   const confirmDelete = () =>
-    Alert.alert('셋리스트 삭제', '이 셋리스트를 삭제할까요?', [
-      { style: 'cancel', text: '취소' },
+    Alert.alert(t('setlists.deleteTitle'), t('setlists.deleteConfirm'), [
+      { style: 'cancel', text: t('common.cancel') },
       {
         style: 'destructive',
-        text: '삭제',
+        text: t('common.delete'),
         onPress: () => void state.remove(),
       },
     ]);
@@ -66,11 +108,11 @@ export function SetlistsScreen({ onBack }: SetlistsScreenProps) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Pressable onPress={onBack}>
-          <Text style={styles.back}>‹ 라이브러리</Text>
+          <Text style={styles.back}>{t('common.backToLibrary')}</Text>
         </Pressable>
-        <Text style={styles.title}>셋리스트</Text>
+        <Text style={styles.title}>{t('setlists.title')}</Text>
         <Pressable onPress={promptCreate}>
-          <Text style={styles.primaryAction}>새로 만들기</Text>
+          <Text style={styles.primaryAction}>{t('setlists.create')}</Text>
         </Pressable>
       </View>
       {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
@@ -80,28 +122,55 @@ export function SetlistsScreen({ onBack }: SetlistsScreenProps) {
             data={state.setlists}
             keyExtractor={(item) => item.id}
             ListEmptyComponent={
-              <Text style={styles.empty}>셋리스트가 없습니다.</Text>
+              <Text style={styles.empty}>{t('setlists.empty')}</Text>
             }
             renderItem={({ item }) => (
               <SetlistRow
                 item={item}
-                onPress={() => void state.select(item)}
+                onPress={() => {
+                  setPreviewSong(null);
+                  setIsEditing(false);
+                  setLibraryQuery('');
+                  void state.select(item);
+                }}
                 selected={state.selected?.id === item.id}
               />
             )}
           />
         </View>
-        <View style={styles.detail}>
+        <ScrollView
+          contentContainerStyle={styles.detailContent}
+          style={styles.detail}
+        >
           {state.selected ? (
             <>
               <View style={styles.detailHeader}>
                 <View>
-                  <Text style={styles.detailTitle}>{state.selected.title}</Text>
+                  {isEditing ? (
+                    <TextInput
+                      autoFocus
+                      onChangeText={setDraftTitle}
+                      onSubmitEditing={() => void toggleEdit()}
+                      style={styles.titleInput}
+                      value={draftTitle}
+                    />
+                  ) : (
+                    <Text style={styles.detailTitle}>
+                      {state.selected.title}
+                    </Text>
+                  )}
                   <Text style={styles.meta}>{state.selected.eventDate}</Text>
                 </View>
                 <View style={styles.actions}>
-                  <SmallButton label="수정" onPress={promptUpdate} />
+                  <SmallButton
+                    label={isEditing ? '완료' : '수정'}
+                    onPress={() => void toggleEdit()}
+                  />
                   <SmallButton label="행사" onPress={promptEvent} />
+                  <SmallButton
+                    label="사용자"
+                    onPress={() => setMembersOpen(true)}
+                  />
                   <SmallButton label="날짜" onPress={promptDate} />
                   <SmallButton
                     label="PDF"
@@ -114,47 +183,64 @@ export function SetlistsScreen({ onBack }: SetlistsScreenProps) {
                   />
                 </View>
               </View>
-              <Text style={styles.sectionTitle}>곡 순서</Text>
+              <Text style={styles.sectionTitle}>{t('setlists.order')}</Text>
               {state.songs.map((song, index) => (
-                <View key={song.id} style={styles.songRow}>
-                  <Text style={styles.order}>{index + 1}</Text>
-                  <View style={styles.songInfo}>
-                    <Text style={styles.songTitle}>{song.title}</Text>
-                    <Text style={styles.meta}>{song.artist}</Text>
-                  </View>
-                  <SmallButton
-                    label="↑"
-                    onPress={() => void state.moveSong(index, -1)}
-                  />
-                  <SmallButton
-                    label="↓"
-                    onPress={() => void state.moveSong(index, 1)}
-                  />
-                </View>
+                <SetlistSongRow
+                  count={state.songs.length}
+                  editing={isEditing}
+                  index={index}
+                  key={song.id}
+                  onMoveTo={(from, to) => void state.moveSongTo(from, to)}
+                  onPress={() => setPreviewSong(song)}
+                  selected={previewSong?.id === song.id}
+                  song={song}
+                />
               ))}
-              <Text style={styles.sectionTitle}>라이브러리에서 추가</Text>
-              <FlatList
-                data={available}
-                keyExtractor={(song) => song.id}
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() => void state.addSong(item)}
-                    style={styles.addRow}
-                  >
-                    <Text style={styles.addLabel}>＋</Text>
-                    <Text style={styles.songTitle}>{item.title}</Text>
-                    <Text style={styles.meta}>{item.artist}</Text>
-                  </Pressable>
-                )}
+              <Text style={styles.sectionTitle}>
+                {t('setlists.addFromLibrary')}
+              </Text>
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={setLibraryQuery}
+                placeholder="제목, 아티스트 또는 태그 검색"
+                placeholderTextColor={colors.muted}
+                style={styles.searchInput}
+                value={libraryQuery}
               />
+              {available.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => void state.addSong(item)}
+                  style={styles.addRow}
+                >
+                  <Text style={styles.addLabel}>＋</Text>
+                  <Text style={styles.songTitle}>{item.title}</Text>
+                  <Text style={styles.meta}>{item.artist}</Text>
+                </Pressable>
+              ))}
             </>
           ) : (
-            <Text style={styles.empty}>
-              셋리스트를 선택하거나 새로 만드세요.
-            </Text>
+            <Text style={styles.empty}>{t('setlists.selectedEmpty')}</Text>
           )}
+        </ScrollView>
+        <View style={styles.preview}>
+          {previewSong && state.selected ? (
+            <SetlistScorePreview
+              onOpenViewer={() =>
+                onOpenViewer(previewSong, state.selected!, state.songs)
+              }
+              song={previewSong}
+            />
+          ) : null}
         </View>
       </View>
+      {state.selected ? (
+        <SetlistMembersModal
+          onClose={() => setMembersOpen(false)}
+          setlistId={state.selected.id}
+          visible={membersOpen}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -204,30 +290,44 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
+    height: SCREEN_HEADER_HEIGHT,
     justifyContent: 'space-between',
-    padding: 20,
+    paddingHorizontal: 14,
   },
   back: { color: colors.primary, fontSize: 15, fontWeight: '700' },
-  title: { color: colors.text, fontSize: 25, fontWeight: '800' },
+  title: { color: colors.text, fontSize: 20, fontWeight: '800' },
   primaryAction: { color: colors.primary, fontSize: 15, fontWeight: '800' },
   columns: { flex: 1, flexDirection: 'row' },
   sidebar: {
     borderRightColor: colors.border,
     borderRightWidth: 1,
     padding: 12,
-    width: 280,
+    width: 165,
   },
-  detail: { flex: 1, padding: 24 },
+  detail: {
+    borderRightColor: colors.border,
+    borderRightWidth: 1,
+    width: 300,
+  },
+  detailContent: { flexGrow: 1, padding: 18 },
+  preview: { backgroundColor: colors.background, flex: 1 },
   setlistRow: { borderRadius: 10, padding: 14 },
   selectedRow: { backgroundColor: colors.primarySoft },
   detailHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 24,
   },
   detailTitle: { color: colors.text, fontSize: 25, fontWeight: '800' },
-  actions: { flexDirection: 'row', gap: 5 },
+  titleInput: {
+    borderBottomColor: colors.primary,
+    borderBottomWidth: 1,
+    color: colors.text,
+    fontSize: 21,
+    fontWeight: '800',
+    minWidth: 150,
+    paddingVertical: 3,
+  },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 8 },
   sectionTitle: {
     color: colors.primary,
     fontSize: 13,
@@ -236,16 +336,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 16,
   },
-  songRow: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    flexDirection: 'row',
-    marginBottom: 7,
-    padding: 10,
-  },
-  order: { color: colors.muted, fontWeight: '700', width: 30 },
-  songInfo: { flex: 1 },
   songTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
   meta: { color: colors.muted, fontSize: 12, marginTop: 2 },
   addRow: {
@@ -257,6 +347,17 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   addLabel: { color: colors.primary, fontSize: 20 },
+  searchInput: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    color: colors.text,
+    fontSize: 13,
+    marginBottom: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+  },
   smallButton: { borderRadius: 7, padding: 8 },
   smallLabel: { color: colors.primary, fontSize: 13, fontWeight: '700' },
   destructive: { color: '#A5392D' },

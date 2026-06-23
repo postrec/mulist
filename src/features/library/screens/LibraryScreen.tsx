@@ -1,19 +1,28 @@
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState } from 'react';
 
 import type { Song } from '../../../domain/models';
 import { FilterChip } from '../../../shared/components/FilterChip';
 import { colors } from '../../../shared/theme/colors';
+import { getTagLabel } from '../../../domain/tagPresets';
 import { LibraryEmptyState } from '../components/LibraryEmptyState';
 import { LibraryHeader } from '../components/LibraryHeader';
 import { SongListItem } from '../components/SongListItem';
+import { SongActionsModal } from '../components/SongActionsModal';
+import {
+  ScoreSettingsModal,
+  type ScoreMetadata,
+} from '../../pdf-viewer/components/ScoreSettingsModal';
 import type { LibraryView } from '../types';
 
 interface LibraryScreenProps {
@@ -22,6 +31,9 @@ interface LibraryScreenProps {
   isLoading: boolean;
   notice: string | null;
   onFavoritePress: (song: Song) => void;
+  onMetadataSave: (song: Song, metadata: ScoreMetadata) => Promise<void>;
+  onSyncPress: (song: Song) => void;
+  onSharePress: (song: Song) => void;
   songs: readonly Song[];
   tags: readonly string[];
   view: LibraryView;
@@ -30,6 +42,7 @@ interface LibraryScreenProps {
   onRestorePress: (song: Song) => void;
   onSearchPress: () => void;
   onSetlistsPress: () => void;
+  onSocialPress: () => void;
   onSettingsPress: () => void;
   onTagSelect: (tag: string) => void;
   onTrashPress: (song: Song) => void;
@@ -52,6 +65,9 @@ export function LibraryScreen({
   isLoading,
   notice,
   onFavoritePress,
+  onMetadataSave,
+  onSyncPress,
+  onSharePress,
   songs,
   tags,
   view,
@@ -60,12 +76,45 @@ export function LibraryScreen({
   onRestorePress,
   onSearchPress,
   onSetlistsPress,
+  onSocialPress,
   onSettingsPress,
   onTagSelect,
   onTrashPress,
   onViewSelect,
   onSongPress = doNothing,
 }: LibraryScreenProps) {
+  const { width } = useWindowDimensions();
+  const columnCount = width >= 560 ? 2 : 1;
+  const [actionSong, setActionSong] = useState<Song | null>(null);
+  const [editingSong, setEditingSong] = useState<Song | null>(null);
+
+  const editSong = (song: Song) => {
+    setActionSong(null);
+    setEditingSong(song);
+  };
+
+  const syncSong = (song: Song) => {
+    setActionSong(null);
+    onSyncPress(song);
+  };
+
+  const shareSong = (song: Song) => {
+    setActionSong(null);
+    onSharePress(song);
+  };
+
+  const confirmDelete = (song: Song) => {
+    setActionSong(null);
+    Alert.alert('곡 삭제', `${song.title}을(를) 휴지통으로 이동할까요?`, [
+      { style: 'cancel', text: '취소' },
+      {
+        style: 'destructive',
+        text: '삭제',
+        onPress: () => onTrashPress(song),
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -74,6 +123,7 @@ export function LibraryScreen({
           onImportPress={onImportPress}
           onSearchPress={onSearchPress}
           onSetlistsPress={onSetlistsPress}
+          onSocialPress={onSocialPress}
           onSettingsPress={onSettingsPress}
           songCount={songs.length}
         />
@@ -82,6 +132,7 @@ export function LibraryScreen({
           contentContainerStyle={styles.filters}
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.filterScroller}
         >
           {filters.map((filter) => (
             <FilterChip
@@ -98,11 +149,12 @@ export function LibraryScreen({
             contentContainerStyle={styles.tagFilters}
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={styles.filterScroller}
           >
             {tags.map((tag) => (
               <FilterChip
                 key={tag}
-                label={`#${tag}`}
+                label={`#${getTagLabel(tag)}`}
                 onPress={() => onTagSelect(tag)}
                 selected={selectedTag === tag}
               />
@@ -114,6 +166,7 @@ export function LibraryScreen({
         {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
         <FlatList
+          columnWrapperStyle={columnCount === 2 ? styles.columns : undefined}
           contentContainerStyle={[
             styles.listContent,
             songs.length === 0 && styles.emptyListContent,
@@ -121,6 +174,7 @@ export function LibraryScreen({
           data={songs}
           ItemSeparatorComponent={ListSeparator}
           keyExtractor={(song) => song.id}
+          key={`library-${columnCount}`}
           ListEmptyComponent={
             isLoading ? (
               <ActivityIndicator
@@ -131,17 +185,44 @@ export function LibraryScreen({
               <LibraryEmptyState {...getEmptyState(view, onImportPress)} />
             )
           }
+          numColumns={columnCount}
           renderItem={({ item }) => (
-            <SongListItem
-              isTrash={view === 'trash'}
-              onFavoritePress={onFavoritePress}
-              onPress={onSongPress}
-              onRestorePress={onRestorePress}
-              onTrashPress={onTrashPress}
-              song={item}
-            />
+            <View
+              style={[
+                styles.gridItem,
+                columnCount === 2 && styles.twoColumnItem,
+              ]}
+            >
+              <SongListItem
+                isTrash={view === 'trash'}
+                onFavoritePress={onFavoritePress}
+                onLongPress={
+                  view === 'trash' ? undefined : (song) => setActionSong(song)
+                }
+                onPress={onSongPress}
+                onRestorePress={onRestorePress}
+                song={item}
+              />
+            </View>
           )}
         />
+        <SongActionsModal
+          onClose={() => setActionSong(null)}
+          onDelete={confirmDelete}
+          onEdit={editSong}
+          onShare={shareSong}
+          onSync={syncSong}
+          song={actionSong}
+        />
+        {editingSong ? (
+          <ScoreSettingsModal
+            heading="곡 정보 수정"
+            onClose={() => setEditingSong(null)}
+            onSave={(metadata) => onMetadataSave(editingSong, metadata)}
+            song={editingSong}
+            visible
+          />
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -194,12 +275,13 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingRight: 24,
     flexDirection: 'row',
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
+  filterScroller: { flexGrow: 0 },
   tagFilters: {
     flexDirection: 'row',
     gap: 8,
-    paddingBottom: 18,
+    paddingBottom: 10,
     paddingRight: 24,
   },
   error: {
@@ -219,6 +301,9 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 32,
   },
+  columns: { gap: 12 },
+  gridItem: { flex: 1 },
+  twoColumnItem: { maxWidth: '49.4%' },
   emptyListContent: {
     flexGrow: 1,
   },

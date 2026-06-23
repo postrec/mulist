@@ -1,36 +1,61 @@
+import Slider from '@react-native-community/slider';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { colors } from '../../../shared/theme/colors';
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { ChoiceGroup } from '../components/ChoiceGroup';
 import { useAppSettings } from '../context/AppSettingsContext';
 import type {
   FontSizePreference,
+  ScoreNavigationMode,
+  ScorePageLayout,
   ThemePreference,
 } from '../domain/AppSettings';
 
-const themes: readonly { label: string; value: ThemePreference }[] = [
-  { label: 'Light', value: 'light' },
-  { label: 'Dark', value: 'dark' },
-  { label: 'System', value: 'system' },
-];
-const fontSizes: readonly { label: string; value: FontSizePreference }[] = [
-  { label: 'Small', value: 'small' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'Large', value: 'large' },
-];
-const zooms = [
-  { label: '90%', value: 0.9 },
-  { label: '100%', value: 1 },
-  { label: '125%', value: 1.25 },
-] as const;
-
 export function DisplaySettingsScreen() {
+  useAppLanguage();
   const { settings, update } = useAppSettings();
+  const [pencilSmoothing, setPencilSmoothing] = useState(
+    settings.applePencilSmoothing,
+  );
+  useEffect(() => {
+    setPencilSmoothing(settings.applePencilSmoothing);
+  }, [settings.applePencilSmoothing]);
+  const themes: readonly { label: string; value: ThemePreference }[] = [
+    { label: t('display.themeLight'), value: 'light' },
+    { label: t('display.themeDark'), value: 'dark' },
+    { label: t('display.themeSystem'), value: 'system' },
+  ];
+  const fontSizes: readonly { label: string; value: FontSizePreference }[] = [
+    { label: t('display.fontSmall'), value: 'small' },
+    { label: t('display.fontMedium'), value: 'medium' },
+    { label: t('display.fontLarge'), value: 'large' },
+  ];
+  const pageLayouts: readonly { label: string; value: ScorePageLayout }[] = [
+    { label: t('viewer.singlePage'), value: 'single' },
+    { label: t('viewer.twoPage'), value: 'two-page' },
+  ];
+  const navigationModes: readonly {
+    label: string;
+    value: ScoreNavigationMode;
+  }[] = [
+    { label: t('viewer.scroll'), value: 'scroll' },
+    { label: t('viewer.snapVertical'), value: 'snap' },
+    { label: t('viewer.scrollHorizontal'), value: 'snap-horizontal' },
+    { label: t('viewer.snapHorizontal'), value: 'snap-horizontal-page' },
+  ];
+  const zooms = [
+    { label: '90%', value: 0.9 },
+    { label: '100%', value: 1 },
+    { label: '125%', value: 1.25 },
+  ] as const;
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <SettingSection
-        description="앱의 기본 색상 모드를 선택합니다."
-        title="Theme"
+        description={t('display.themeDescription')}
+        title={t('settings.theme')}
       >
         <ChoiceGroup
           choices={themes}
@@ -39,8 +64,8 @@ export function DisplaySettingsScreen() {
         />
       </SettingSection>
       <SettingSection
-        description="목록과 설정 화면에서 사용할 글자 크기입니다."
-        title="Font Size"
+        description={t('display.fontSizeDescription')}
+        title={t('settings.fontSize')}
       >
         <ChoiceGroup
           choices={fontSizes}
@@ -49,8 +74,32 @@ export function DisplaySettingsScreen() {
         />
       </SettingSection>
       <SettingSection
-        description="PDF를 열 때 적용할 기본 확대 비율입니다."
-        title="Default Zoom"
+        description={t('display.pencilSmoothingDescription')}
+        title={`${t('display.pencilSmoothing')} · ${pencilSmoothing}`}
+      >
+        <View style={styles.sliderRow}>
+          <Text style={styles.sliderEdge}>0</Text>
+          <Slider
+            accessibilityLabel={t('display.pencilSmoothing')}
+            maximumTrackTintColor="#B8BDB9"
+            maximumValue={10}
+            minimumTrackTintColor="#4C8A6F"
+            minimumValue={0}
+            onSlidingComplete={(applePencilSmoothing) =>
+              void update({ applePencilSmoothing })
+            }
+            onValueChange={(value) => setPencilSmoothing(Math.round(value))}
+            step={1}
+            style={styles.slider}
+            thumbTintColor="#285C46"
+            value={pencilSmoothing}
+          />
+          <Text style={styles.sliderEdge}>10</Text>
+        </View>
+      </SettingSection>
+      <SettingSection
+        description={t('display.defaultZoomDescription')}
+        title={t('settings.defaultZoom')}
       >
         <ChoiceGroup
           choices={zooms}
@@ -58,15 +107,37 @@ export function DisplaySettingsScreen() {
           value={settings.defaultZoom}
         />
       </SettingSection>
+      <SettingSection
+        description={t('display.defaultPageLayoutDescription')}
+        title={t('settings.defaultPageLayout')}
+      >
+        <ChoiceGroup
+          choices={pageLayouts}
+          onChange={(defaultPageLayout) => void update({ defaultPageLayout })}
+          value={settings.defaultPageLayout}
+        />
+      </SettingSection>
+      <SettingSection
+        description={t('display.defaultNavigationModeDescription')}
+        title={t('settings.defaultNavigationMode')}
+      >
+        <ChoiceGroup
+          choices={navigationModes}
+          onChange={(defaultNavigationMode) =>
+            void update({ defaultNavigationMode })
+          }
+          value={settings.defaultNavigationMode}
+        />
+      </SettingSection>
       <SwitchRow
-        description="악보 가장자리의 빈 여백을 자동으로 줄입니다."
-        label="Auto Crop Margin"
+        description={t('display.autoCropDescription')}
+        label={t('settings.autoCropMargin')}
         onChange={(autoCropMargin) => void update({ autoCropMargin })}
         value={settings.autoCropMargin}
       />
       <SwitchRow
-        description="PDF Viewer를 가로 방향으로 고정합니다."
-        label="Landscape Lock"
+        description={t('display.landscapeLockDescription')}
+        label={t('settings.landscapeLock')}
         onChange={(landscapeLock) => void update({ landscapeLock })}
         value={settings.landscapeLock}
       />
@@ -136,6 +207,14 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontSize: 16, fontWeight: '700' },
   description: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  slider: { flex: 1, height: 40 },
+  sliderEdge: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '700',
+    width: 20,
+  },
+  sliderRow: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   switchRow: {
     alignItems: 'center',
     backgroundColor: colors.surface,

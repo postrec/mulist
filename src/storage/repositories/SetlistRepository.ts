@@ -7,6 +7,12 @@ interface SetlistRow {
   title: string;
   event_name: string;
   event_date: string;
+  owner_id: string | null;
+  device_id: string | null;
+  revision: number;
+  server_updated_at: string | null;
+  sync_status: Setlist['syncStatus'];
+  deleted_at: string | null;
 }
 
 interface SetlistSongRow {
@@ -20,16 +26,26 @@ export class SetlistRepository {
 
   public async save(setlist: Setlist): Promise<void> {
     await this.database.runAsync(
-      `INSERT INTO setlists (id, title, event_name, event_date)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO setlists (id, title, event_name, event_date, owner_id, device_id,
+         revision, server_updated_at, sync_status, deleted_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          title = excluded.title,
          event_name = excluded.event_name,
-         event_date = excluded.event_date`,
+         event_date = excluded.event_date, owner_id = excluded.owner_id,
+         device_id = excluded.device_id, revision = excluded.revision,
+         server_updated_at = excluded.server_updated_at,
+         sync_status = excluded.sync_status, deleted_at = excluded.deleted_at`,
       setlist.id,
       setlist.title,
       setlist.eventName,
       setlist.eventDate,
+      setlist.ownerId ?? null,
+      setlist.deviceId ?? null,
+      setlist.revision ?? 0,
+      setlist.serverUpdatedAt ?? null,
+      setlist.syncStatus ?? 'local',
+      setlist.deletedAt ?? null,
     );
   }
 
@@ -42,6 +58,13 @@ export class SetlistRepository {
   }
 
   public async findAll(): Promise<readonly Setlist[]> {
+    const rows = await this.database.getAllAsync<SetlistRow>(
+      'SELECT * FROM setlists WHERE deleted_at IS NULL ORDER BY event_date DESC, title',
+    );
+    return rows.map(toSetlist);
+  }
+
+  public async findAllIncludingDeleted(): Promise<readonly Setlist[]> {
     const rows = await this.database.getAllAsync<SetlistRow>(
       'SELECT * FROM setlists ORDER BY event_date DESC, title',
     );
@@ -69,6 +92,10 @@ export class SetlistRepository {
           song.order,
         );
       }
+      await this.database.runAsync(
+        "UPDATE setlists SET sync_status = 'pending' WHERE id = ?",
+        setlistId,
+      );
     });
   }
 
@@ -87,7 +114,11 @@ export class SetlistRepository {
   }
 
   public async remove(id: string): Promise<void> {
-    await this.database.runAsync('DELETE FROM setlists WHERE id = ?', id);
+    await this.database.runAsync(
+      "UPDATE setlists SET deleted_at = ?, sync_status = 'pending' WHERE id = ?",
+      new Date().toISOString(),
+      id,
+    );
   }
 }
 
@@ -97,6 +128,12 @@ function toSetlist(row: SetlistRow): Setlist {
     title: row.title,
     eventName: row.event_name,
     eventDate: row.event_date,
+    ownerId: row.owner_id,
+    deviceId: row.device_id,
+    revision: row.revision,
+    serverUpdatedAt: row.server_updated_at,
+    syncStatus: row.sync_status ?? 'local',
+    deletedAt: row.deleted_at,
   };
 }
 

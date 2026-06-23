@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { NoteLayer, Score, Song } from '../../../domain/models';
+import type {
+  NoteLayer,
+  Score,
+  ScoreViewState,
+  Song,
+} from '../../../domain/models';
 import { getRepositories } from '../../../storage';
 import type { ScoreMetadata } from '../components/ScoreSettingsModal';
 
@@ -11,7 +16,7 @@ interface ViewerState {
   score: Score | null;
 }
 
-const emptyNoteLayer: NoteLayer = { strokes: [], texts: [], version: 1 };
+const emptyNoteLayer: NoteLayer = { strokes: [], texts: [], version: 2 };
 
 export function usePdfViewer(song: Song) {
   const [state, setState] = useState<ViewerState>({
@@ -23,6 +28,7 @@ export function usePdfViewer(song: Song) {
 
   useEffect(() => {
     let active = true;
+    setState((current) => ({ ...current, error: null, isLoading: true }));
     void getRepositories()
       .then(async ({ scores, songs }) => {
         await songs.markOpened(song.id);
@@ -91,5 +97,16 @@ export function usePdfViewer(song: Song) {
     [song],
   );
 
-  return { ...state, saveBpm, saveMetadata, saveNoteLayer };
+  const saveViewState = useCallback(
+    async (viewState: ScoreViewState) => {
+      if (!state.score) return;
+      const score = { ...state.score, viewState };
+      setState((current) => ({ ...current, score }));
+      const { scores } = await getRepositories();
+      await scores.save(score);
+    },
+    [state.score],
+  );
+
+  return { ...state, saveBpm, saveMetadata, saveNoteLayer, saveViewState };
 }

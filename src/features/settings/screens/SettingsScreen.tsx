@@ -1,14 +1,21 @@
-import { useState } from 'react';
-import {
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '../../../shared/theme/colors';
+import { SCREEN_HEADER_HEIGHT } from '../../../shared/layout/metrics';
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
+import { firebaseAuth } from '../../../config/firebase';
+import {
+  defaultUserProfile,
+  type UserProfile,
+} from '../../auth/domain/UserProfile';
+import {
+  loadCloudProfile,
+  loadLocalProfile,
+} from '../../auth/services/userProfileService';
 import { SettingsRow } from '../components/SettingsRow';
 import type { SettingsRoute } from '../types';
 import { AccountSettingsScreen } from './AccountSettingsScreen';
@@ -16,6 +23,7 @@ import { CloudSyncSettingsScreen } from './CloudSyncSettingsScreen';
 import { DisplaySettingsScreen } from './DisplaySettingsScreen';
 import { DeveloperSettingsScreen } from './DeveloperSettingsScreen';
 import { FeedbackSettingsScreen } from './FeedbackSettingsScreen';
+import { LanguageSettingsScreen } from './LanguageSettingsScreen';
 import { SubscriptionSettingsScreen } from './SubscriptionSettingsScreen';
 import { VersionSettingsScreen } from './VersionSettingsScreen';
 
@@ -23,17 +31,19 @@ interface SettingsScreenProps {
   onClose: () => void;
 }
 
-const routeLabels: Record<SettingsRoute, string> = {
-  account: '계정',
-  developer: 'Developer Mode',
-  display: '화면 설정',
-  feedback: '피드백',
-  subscription: '구독',
-  sync: '클라우드 동기화',
-  version: '버전 정보',
-};
+function getRouteLabel(route: SettingsRoute): string {
+  if (route === 'account') return t('settings.account');
+  if (route === 'developer') return t('settings.developerMode');
+  if (route === 'display') return t('settings.displaySettings');
+  if (route === 'feedback') return t('settings.feedback');
+  if (route === 'language') return t('settings.language');
+  if (route === 'subscription') return t('settings.subscription');
+  if (route === 'sync') return t('settings.cloudSync');
+  return t('settings.versionInfo');
+}
 
 export function SettingsScreen({ onClose }: SettingsScreenProps) {
+  useAppLanguage();
   const [route, setRoute] = useState<SettingsRoute | null>(null);
   const goBack = () => (route ? setRoute(null) : onClose());
 
@@ -46,10 +56,12 @@ export function SettingsScreen({ onClose }: SettingsScreenProps) {
           style={styles.backButton}
         >
           <Text style={styles.backLabel}>
-            ‹ {route ? '설정' : '라이브러리'}
+            {route ? t('common.backToSettings') : t('common.backToLibrary')}
           </Text>
         </Pressable>
-        <Text style={styles.title}>{route ? routeLabels[route] : '설정'}</Text>
+        <Text style={styles.title}>
+          {route ? getRouteLabel(route) : t('settings.title')}
+        </Text>
         <View style={styles.spacer} />
       </View>
       {route ? (
@@ -68,43 +80,135 @@ function SettingsHome({
 }) {
   return (
     <ScrollView contentContainerStyle={styles.scrollContent}>
-      <Text style={styles.sectionTitle}>앱 설정</Text>
+      <AccountSummary onPress={() => onSelect('account')} />
+      <Text style={styles.sectionTitle}>{t('settings.appSettings')}</Text>
       <View style={styles.group}>
         <SettingsRow
-          detail="테마, 글자 크기, PDF 보기"
-          label="화면 설정"
+          detail={t('settings.languageDescription')}
+          label={t('settings.language')}
+          onPress={() => onSelect('language')}
+        />
+        <SettingsRow
+          detail={t('settings.displaySubtitle')}
+          label={t('settings.displaySettings')}
           onPress={() => onSelect('display')}
         />
         <SettingsRow
-          detail="로그인과 계정 관리"
-          label="계정"
-          onPress={() => onSelect('account')}
-        />
-        <SettingsRow
-          detail="플랜과 결제 관리"
-          label="구독"
+          detail={t('settings.subscriptionSubtitle')}
+          label={t('settings.subscription')}
           onPress={() => onSelect('subscription')}
         />
         <SettingsRow
-          detail="백업과 네트워크 사용"
-          label="클라우드 동기화"
+          detail={t('settings.syncSubtitle')}
+          label={t('settings.cloudSync')}
           onPress={() => onSelect('sync')}
         />
       </View>
-      <Text style={styles.sectionTitle}>지원</Text>
+      <Text style={styles.sectionTitle}>
+        {t('settings.homeSectionSupport')}
+      </Text>
       <View style={styles.group}>
         <SettingsRow
-          label="Developer Mode"
+          label={t('settings.developerMode')}
           onPress={() => onSelect('developer')}
         />
-        <SettingsRow label="피드백" onPress={() => onSelect('feedback')} />
-        <SettingsRow label="버전 정보" onPress={() => onSelect('version')} />
+        <SettingsRow
+          label={t('settings.feedback')}
+          onPress={() => onSelect('feedback')}
+        />
+        <SettingsRow
+          label={t('settings.versionInfo')}
+          onPress={() => onSelect('version')}
+        />
       </View>
     </ScrollView>
   );
 }
 
+function AccountSummary({ onPress }: { onPress: () => void }) {
+  const [user, setUser] = useState<User | null>(firebaseAuth.currentUser);
+  const [profile, setProfile] = useState<UserProfile>(defaultUserProfile);
+
+  useEffect(() => onAuthStateChanged(firebaseAuth, setUser), []);
+
+  useEffect(() => {
+    if (!user) {
+      setProfile(defaultUserProfile);
+      return;
+    }
+    let active = true;
+    void loadLocalProfile(user.uid).then((value) => {
+      if (active) setProfile(value);
+    });
+    void loadCloudProfile(user.uid)
+      .then((value) => {
+        if (active && value) setProfile(value);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  const title =
+    profile.name ||
+    user?.displayName ||
+    user?.email ||
+    t('account.notSignedIn');
+  const providers = user?.providerData
+    .map(({ providerId }) => providerLabel(providerId))
+    .filter((provider, index, all) => all.indexOf(provider) === index)
+    .join(' · ');
+  const detail = user
+    ? [profile.primaryPart, providers].filter(Boolean).join(' · ') ||
+      t('settings.accountSubtitle')
+    : t('account.cloudNotice');
+  const initial = user
+    ? (profile.name || user.displayName || user.email || 'M')
+        .trim()
+        .charAt(0)
+        .toUpperCase()
+    : '👤';
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.accountSummary,
+        pressed && styles.accountSummaryPressed,
+      ]}
+    >
+      <View
+        style={[
+          styles.avatar,
+          user ? { backgroundColor: profile.color } : undefined,
+        ]}
+      >
+        <Text style={styles.avatarText}>{initial}</Text>
+      </View>
+      <View style={styles.accountText}>
+        <Text numberOfLines={1} style={styles.accountName}>
+          {title}
+        </Text>
+        <Text numberOfLines={1} style={styles.accountDetail}>
+          {detail}
+        </Text>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </Pressable>
+  );
+}
+
+function providerLabel(providerId: string): string {
+  if (providerId === 'password') return t('account.email');
+  if (providerId === 'google.com') return 'Google';
+  if (providerId === 'apple.com') return 'Apple';
+  return providerId;
+}
+
 function SettingsRouteContent({ route }: { route: SettingsRoute }) {
+  if (route === 'language') return <LanguageSettingsScreen />;
   if (route === 'display') return <DisplaySettingsScreen />;
   if (route === 'account') return <AccountSettingsScreen />;
   if (route === 'subscription') return <SubscriptionSettingsScreen />;
@@ -114,7 +218,7 @@ function SettingsRouteContent({ route }: { route: SettingsRoute }) {
   if (route === 'version') return <VersionSettingsScreen />;
   return (
     <View style={styles.placeholder}>
-      <Text style={styles.placeholderTitle}>{routeLabels[route]}</Text>
+      <Text style={styles.placeholderTitle}>{getRouteLabel(route)}</Text>
       <Text style={styles.placeholderText}>
         이 설정 화면을 구성하고 있습니다.
       </Text>
@@ -129,7 +233,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
-    minHeight: 64,
+    height: SCREEN_HEADER_HEIGHT,
     paddingHorizontal: 20,
   },
   backButton: { paddingVertical: 12, width: 130 },
@@ -137,7 +241,7 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     flex: 1,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -148,6 +252,30 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
   },
+  accountSummary: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: 8,
+    padding: 18,
+  },
+  accountSummaryPressed: { opacity: 0.7 },
+  avatar: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  avatarText: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
+  accountText: { flex: 1, marginLeft: 14 },
+  accountName: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  accountDetail: { color: colors.muted, fontSize: 13, marginTop: 4 },
+  chevron: { color: colors.muted, fontSize: 28, marginLeft: 12 },
   sectionTitle: {
     color: colors.muted,
     fontSize: 12,

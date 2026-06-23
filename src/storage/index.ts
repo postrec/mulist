@@ -5,6 +5,8 @@ import { SearchRepository } from './repositories/SearchRepository';
 import { SettingsRepository } from './repositories/SettingsRepository';
 import { SetlistRepository } from './repositories/SetlistRepository';
 import { SongRepository } from './repositories/SongRepository';
+import { SyncQueueRepository } from './repositories/SyncQueueRepository';
+import { TeamRepository } from './repositories/TeamRepository';
 
 export interface Repositories {
   ocr: OcrRepository;
@@ -13,6 +15,8 @@ export interface Repositories {
   search: SearchRepository;
   settings: SettingsRepository;
   setlists: SetlistRepository;
+  syncQueue: SyncQueueRepository;
+  teams: TeamRepository;
 }
 
 let repositoriesPromise: Promise<Repositories> | null = null;
@@ -31,5 +35,7 @@ async function createRepositories(): Promise<Repositories> {
     search: new SearchRepository(database),
     settings: new SettingsRepository(database),
     setlists: new SetlistRepository(database),
+    syncQueue: new SyncQueueRepository(database),
+    teams: new TeamRepository(database),
   };
 }

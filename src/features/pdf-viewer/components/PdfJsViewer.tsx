@@ -4,6 +4,11 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 
 import { colors } from '../../../shared/theme/colors';
+import type {
+  NoteLayer,
+  ScoreNavigationMode,
+  StrokeTool,
+} from '../../../domain/models';
 import { createPdfJsHtml } from '../services/createPdfJsHtml';
 import {
   type PdfJsAssetUris,
@@ -12,22 +17,51 @@ import {
 import type { PageLayout } from './ViewerControls';
 
 interface PdfJsViewerProps {
+  drawingColor?: string;
   fileUri: string;
+  drawingTool?: DrawingTool | null;
   layout: PageLayout;
+  navigationMode: ScoreNavigationMode;
+  initialPage: number;
+  menuVisible?: boolean;
+  noteLayer?: NoteLayer;
+  onNoteLayerChange?: (noteLayer: NoteLayer) => void;
+  onTap: (page: number | null) => void;
+  onPageChange: (page: number) => void;
   onZoomChange: (zoom: number) => void;
+  pencilSmoothing?: number;
   zoom: number;
 }
 
+type DrawingTool = StrokeTool | 'eraser';
+
+const emptyNoteLayer: NoteLayer = { strokes: [], texts: [], version: 2 };
+
 export function PdfJsViewer({
+  drawingColor = '#C62828',
+  drawingTool = null,
   fileUri,
   layout,
+  navigationMode,
+  initialPage,
+  menuVisible = true,
+  noteLayer = emptyNoteLayer,
+  onNoteLayerChange,
+  onTap,
+  onPageChange,
   onZoomChange,
+  pencilSmoothing = 2,
   zoom,
 }: PdfJsViewerProps) {
   const webView = useRef<WebView>(null);
   const lastViewerZoom = useRef<number | null>(null);
   const initialLayout = useRef(layout).current;
+  const initialNavigationMode = useRef(navigationMode).current;
+  const restoredPage = useRef(initialPage).current;
   const initialZoom = useRef(zoom).current;
+  const initialNoteLayer = useRef(noteLayer).current;
+  const initialDrawingColor = useRef(drawingColor).current;
+  const initialPencilSmoothing = useRef(pencilSmoothing).current;
   const [assets, setAssets] = useState<PdfJsAssetUris | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -83,11 +117,27 @@ export function PdfJsViewer({
             ...assets,
             fileUri,
             initialLayout,
+            initialNavigationMode,
+            initialPage: restoredPage,
             initialZoom,
+            initialNoteLayer,
+            initialDrawingColor,
+            initialPencilSmoothing,
             pdfBase64,
           })
         : null,
-    [assets, fileUri, initialLayout, initialZoom, pdfBase64],
+    [
+      assets,
+      fileUri,
+      initialLayout,
+      initialNavigationMode,
+      initialZoom,
+      initialNoteLayer,
+      initialDrawingColor,
+      initialPencilSmoothing,
+      pdfBase64,
+      restoredPage,
+    ],
   );
 
   useEffect(() => {
@@ -104,6 +154,48 @@ export function PdfJsViewer({
     );
   }, [isReady, layout]);
 
+  useEffect(() => {
+    if (!isReady) return;
+    webView.current?.injectJavaScript(
+      `window.mulistPdf.setNavigationMode(${JSON.stringify(navigationMode)});true;`,
+    );
+  }, [isReady, navigationMode]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    webView.current?.injectJavaScript(
+      `window.mulistPdf.setMenuVisible(${menuVisible});true;`,
+    );
+  }, [isReady, menuVisible]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    webView.current?.injectJavaScript(
+      `window.mulistPdf.setDrawingTool(${JSON.stringify(drawingTool)});true;`,
+    );
+  }, [drawingTool, isReady]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    webView.current?.injectJavaScript(
+      `window.mulistPdf.setDrawingColor(${JSON.stringify(drawingColor)});true;`,
+    );
+  }, [drawingColor, isReady]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    webView.current?.injectJavaScript(
+      `window.mulistPdf.setPencilSmoothing(${pencilSmoothing});true;`,
+    );
+  }, [isReady, pencilSmoothing]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    webView.current?.injectJavaScript(
+      `window.mulistPdf.setNoteLayer(${JSON.stringify(noteLayer)});true;`,
+    );
+  }, [isReady, noteLayer]);
+
   const receiveMessage = (event: WebViewMessageEvent) => {
     const message = parseViewerMessage(event.nativeEvent.data);
     if (!message) return;
@@ -112,8 +204,14 @@ export function PdfJsViewer({
     } else if (message.type === 'zoom') {
       lastViewerZoom.current = message.zoom;
       onZoomChange(message.zoom);
+    } else if (message.type === 'tap') {
+      onTap(message.page);
     } else if (message.type === 'diagnostic') {
       console.warn(message.message);
+    } else if (message.type === 'page') {
+      onPageChange(message.page);
+    } else if (message.type === 'noteLayer') {
+      onNoteLayerChange?.(message.noteLayer);
     } else {
       setError(message.message);
     }
@@ -142,8 +240,11 @@ export function PdfJsViewer({
 type ViewerMessage =
   | { type: 'ready' }
   | { type: 'zoom'; zoom: number }
+  | { page: number | null; type: 'tap' }
+  | { page: number; type: 'page' }
   | { message: string; type: 'diagnostic' }
-  | { message: string; type: 'error' };
+  | { message: string; type: 'error' }
+  | { noteLayer: NoteLayer; type: 'noteLayer' };
 
 function parseViewerMessage(value: string): ViewerMessage | null {
   try {
@@ -153,16 +254,60 @@ function parseViewerMessage(value: string): ViewerMessage | null {
     if (parsed.type === 'zoom' && typeof parsed.zoom === 'number') {
       return { type: 'zoom', zoom: parsed.zoom };
     }
+    if (parsed.type === 'tap') {
+      return {
+        page: typeof parsed.page === 'number' ? parsed.page : null,
+        type: 'tap',
+      };
+    }
+    if (parsed.type === 'page' && typeof parsed.page === 'number') {
+      return { page: parsed.page, type: 'page' };
+    }
     if (parsed.type === 'diagnostic' && typeof parsed.message === 'string') {
       return { message: parsed.message, type: 'diagnostic' };
     }
     if (parsed.type === 'error' && typeof parsed.message === 'string') {
       return { message: parsed.message, type: 'error' };
     }
+    if (parsed.type === 'noteLayer' && isNoteLayer(parsed.noteLayer)) {
+      return { noteLayer: parsed.noteLayer, type: 'noteLayer' };
+    }
     return null;
   } catch {
     return null;
   }
+}
+
+function isNoteLayer(value: unknown): value is NoteLayer {
+  return (
+    isRecord(value) &&
+    typeof value.version === 'number' &&
+    Array.isArray(value.strokes) &&
+    value.strokes.every(isAnnotationStroke) &&
+    Array.isArray(value.texts)
+  );
+}
+
+function isAnnotationStroke(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (
+    typeof value.id !== 'string' ||
+    typeof value.color !== 'string' ||
+    typeof value.opacity !== 'number' ||
+    typeof value.width !== 'number' ||
+    (value.page !== undefined && typeof value.page !== 'number') ||
+    (value.tool !== 'pen' && value.tool !== 'highlighter') ||
+    !Array.isArray(value.points)
+  ) {
+    return false;
+  }
+  return value.points.every(
+    (point) =>
+      isRecord(point) &&
+      typeof point.x === 'number' &&
+      typeof point.y === 'number' &&
+      typeof point.pressure === 'number',
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

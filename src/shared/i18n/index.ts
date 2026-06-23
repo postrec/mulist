@@ -1,0 +1,782 @@
+import { languageNames, type AppLanguage } from './language';
+
+type TranslationKey =
+  | 'common.backToLibrary'
+  | 'common.backToSettings'
+  | 'common.cancel'
+  | 'common.delete'
+  | 'common.confirm'
+  | 'common.loading'
+  | 'common.none'
+  | 'account.appleLogin'
+  | 'account.cloudNotice'
+  | 'account.deleteAccount'
+  | 'account.deleteConfirmBody'
+  | 'account.deleteConfirmTitle'
+  | 'account.email'
+  | 'account.emailPlaceholder'
+  | 'account.emailStart'
+  | 'account.firebaseUid'
+  | 'account.googleLogin'
+  | 'account.login'
+  | 'account.loginMethod'
+  | 'account.logout'
+  | 'account.notSignedIn'
+  | 'account.passwordPlaceholder'
+  | 'account.register'
+  | 'account.signInWithEmail'
+  | 'account.title'
+  | 'display.autoCropDescription'
+  | 'display.defaultNavigationMode'
+  | 'display.defaultNavigationModeDescription'
+  | 'display.defaultPageLayout'
+  | 'display.defaultPageLayoutDescription'
+  | 'display.defaultZoom'
+  | 'display.defaultZoomDescription'
+  | 'display.fontSize'
+  | 'display.fontSizeDescription'
+  | 'display.fontLarge'
+  | 'display.fontMedium'
+  | 'display.fontSmall'
+  | 'display.landscapeLock'
+  | 'display.landscapeLockDescription'
+  | 'display.pencilSmoothing'
+  | 'display.pencilSmoothingDescription'
+  | 'display.themeDark'
+  | 'display.themeLight'
+  | 'display.themeSystem'
+  | 'display.theme'
+  | 'display.themeDescription'
+  | 'developer.createTestSetlist'
+  | 'developer.createTestSong'
+  | 'developer.database'
+  | 'developer.description'
+  | 'developer.debug'
+  | 'developer.loadingError'
+  | 'developer.ocr'
+  | 'developer.packageUsage'
+  | 'developer.resetConfirmBody'
+  | 'developer.resetConfirmTitle'
+  | 'developer.resetDatabase'
+  | 'developer.rerunOcr'
+  | 'developer.stats'
+  | 'developer.storage'
+  | 'developer.sync'
+  | 'developer.syncStatus'
+  | 'developer.title'
+  | 'developer.viewOcrResult'
+  | 'feedback.bodyPrompt'
+  | 'feedback.bugReport'
+  | 'feedback.contact'
+  | 'feedback.description'
+  | 'feedback.diagnosticsTitle'
+  | 'feedback.featureRequest'
+  | 'feedback.intro'
+  | 'feedback.title'
+  | 'language.description'
+  | 'language.english'
+  | 'language.japanese'
+  | 'language.korean'
+  | 'language.title'
+  | 'library.importPdf'
+  | 'library.search'
+  | 'library.setlists'
+  | 'library.settings'
+  | 'library.title'
+  | 'search.all'
+  | 'search.artist'
+  | 'search.emptyQuery'
+  | 'search.emptyResults'
+  | 'search.ocr'
+  | 'search.placeholder'
+  | 'search.tag'
+  | 'search.title'
+  | 'search.titleScope'
+  | 'setlists.addFromLibrary'
+  | 'setlists.create'
+  | 'setlists.createPrompt'
+  | 'setlists.deleteTitle'
+  | 'setlists.deleteConfirm'
+  | 'setlists.editDate'
+  | 'setlists.editEventName'
+  | 'setlists.editName'
+  | 'setlists.empty'
+  | 'setlists.renameDatePrompt'
+  | 'setlists.selectedEmpty'
+  | 'setlists.order'
+  | 'setlists.title'
+  | 'settings.account'
+  | 'settings.accountSubtitle'
+  | 'settings.appSettings'
+  | 'settings.autoCropMargin'
+  | 'settings.cloudSync'
+  | 'settings.developerMode'
+  | 'settings.displaySettings'
+  | 'settings.displaySubtitle'
+  | 'settings.defaultNavigationMode'
+  | 'settings.defaultPageLayout'
+  | 'settings.defaultZoom'
+  | 'settings.feedback'
+  | 'settings.feedbackSubtitle'
+  | 'settings.fontSize'
+  | 'settings.homeSectionApp'
+  | 'settings.homeSectionSupport'
+  | 'settings.language'
+  | 'settings.languageDescription'
+  | 'settings.languageTitle'
+  | 'settings.languageValueEn'
+  | 'settings.languageValueJa'
+  | 'settings.languageValueKo'
+  | 'settings.languageValueLabel'
+  | 'settings.subscription'
+  | 'settings.subscriptionSubtitle'
+  | 'settings.sync'
+  | 'settings.syncSubtitle'
+  | 'settings.landscapeLock'
+  | 'settings.theme'
+  | 'settings.title'
+  | 'settings.versionInfo'
+  | 'settings.versionSubtitle'
+  | 'subscription.currentPlan'
+  | 'subscription.freePlan'
+  | 'subscription.manageBilling'
+  | 'subscription.premiumPlan'
+  | 'subscription.redeem'
+  | 'subscription.redeemDescription'
+  | 'subscription.redeemInvalid'
+  | 'subscription.redeemPlaceholder'
+  | 'subscription.redeemRateLimited'
+  | 'subscription.redeemSignInRequired'
+  | 'subscription.redeemSuccess'
+  | 'subscription.redeemTitle'
+  | 'subscription.restorePurchases'
+  | 'subscription.startSubscription'
+  | 'subscription.title'
+  | 'subscription.unavailable'
+  | 'version.build'
+  | 'version.legal'
+  | 'version.openSourceLicenses'
+  | 'version.releaseNotes'
+  | 'version.title'
+  | 'version.unavailable'
+  | 'viewer.drawing'
+  | 'viewer.eraser'
+  | 'viewer.highlighter'
+  | 'viewer.hideMenu'
+  | 'viewer.menu'
+  | 'viewer.navigationMode'
+  | 'viewer.pageView'
+  | 'viewer.pen'
+  | 'viewer.scoreSettings'
+  | 'viewer.scroll'
+  | 'viewer.scrollHorizontal'
+  | 'viewer.snapHorizontal'
+  | 'viewer.setlist'
+  | 'viewer.singlePage'
+  | 'viewer.snapVertical'
+  | 'viewer.title'
+  | 'viewer.twoPage'
+  | 'viewer.view'
+  | 'viewer.zoomIn'
+  | 'viewer.zoomOut';
+
+const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
+  ko: {
+    'common.backToLibrary': '‹ 라이브러리',
+    'common.backToSettings': '‹ 설정',
+    'common.cancel': '취소',
+    'common.delete': '삭제',
+    'common.confirm': '확인',
+    'common.loading': '처리 중…',
+    'common.none': '-',
+    'account.appleLogin': 'Apple로 로그인',
+    'account.cloudNotice': 'Cloud 기능은 로그인 후 사용할 수 있습니다.',
+    'account.deleteAccount': '계정 삭제',
+    'account.deleteConfirmBody':
+      'Firebase 계정을 영구 삭제합니다. 최근 로그인이 필요할 수 있습니다.',
+    'account.deleteConfirmTitle': '계정 삭제',
+    'account.email': '이메일',
+    'account.emailPlaceholder': 'email@example.com',
+    'account.emailStart': '이메일로 시작하기',
+    'account.firebaseUid': 'Firebase UID',
+    'account.googleLogin': 'Google로 로그인',
+    'account.login': '로그인',
+    'account.loginMethod': '로그인 방식',
+    'account.logout': '로그아웃',
+    'account.notSignedIn': '로그인하지 않음',
+    'account.passwordPlaceholder': '비밀번호 (6자 이상)',
+    'account.register': '회원가입',
+    'account.signInWithEmail': '이메일로 시작하기',
+    'account.title': '계정',
+    'display.autoCropDescription':
+      '악보 가장자리의 빈 여백을 자동으로 줄입니다.',
+    'display.defaultNavigationMode': 'Default Navigation Mode',
+    'display.defaultNavigationModeDescription':
+      '악보를 넘길 때 사용할 기본 이동 방식을 선택합니다.',
+    'display.defaultPageLayout': 'Default Page Layout',
+    'display.defaultPageLayoutDescription':
+      '악보를 처음 열 때 사용할 기본 페이지 보기 방식입니다.',
+    'display.defaultZoom': 'Default Zoom',
+    'display.defaultZoomDescription':
+      'PDF를 열 때 적용할 기본 확대 비율입니다.',
+    'display.fontSize': 'Font Size',
+    'display.fontSizeDescription':
+      '목록과 설정 화면에서 사용할 글자 크기입니다.',
+    'display.fontLarge': 'Large',
+    'display.fontMedium': 'Medium',
+    'display.fontSmall': 'Small',
+    'display.landscapeLock': 'Landscape Lock',
+    'display.landscapeLockDescription':
+      'PDF Viewer를 가로 방향으로 고정합니다.',
+    'display.pencilSmoothing': 'Apple Pencil 곡선 보정',
+    'display.pencilSmoothingDescription':
+      '0은 보정 없음, 10은 가장 강한 곡선 보정입니다.',
+    'display.themeDark': 'Dark',
+    'display.themeLight': 'Light',
+    'display.themeSystem': 'System',
+    'display.theme': 'Theme',
+    'display.themeDescription': '앱의 기본 색상 모드를 선택합니다.',
+    'developer.createTestSetlist': '테스트 Setlist 생성',
+    'developer.createTestSong': '테스트 Song 생성',
+    'developer.database': 'Database',
+    'developer.description': '진단 및 테스트 도구를 표시합니다.',
+    'developer.debug': 'Debug',
+    'developer.loadingError': '작업에 실패했습니다.',
+    'developer.ocr': 'OCR',
+    'developer.packageUsage': 'Song Package / 사용량 보기',
+    'developer.resetConfirmBody': '모든 Song과 Setlist를 삭제합니다.',
+    'developer.resetConfirmTitle': 'Database 초기화',
+    'developer.resetDatabase': 'Database 초기화',
+    'developer.rerunOcr': 'OCR 강제 재실행',
+    'developer.stats': 'Song Count / Database 정보',
+    'developer.storage': 'Storage',
+    'developer.sync': 'Sync',
+    'developer.syncStatus': 'Sync 상태: Sync Queue 미구성',
+    'developer.title': 'Developer Mode',
+    'developer.viewOcrResult': 'OCR 결과 보기',
+    'feedback.bodyPrompt': '내용을 입력해 주세요.',
+    'feedback.bugReport': '버그 제보',
+    'feedback.contact': '문의하기',
+    'feedback.description': '오류 상황과 재현 방법을 알려주세요.',
+    'feedback.diagnosticsTitle': '포함되는 진단 정보',
+    'feedback.featureRequest': '기능 제안',
+    'feedback.intro':
+      '메일 앱을 열어 의견을 보냅니다. 문제 해결을 위해 앱과 기기 정보가 자동 포함됩니다.',
+    'feedback.title': '피드백',
+    'language.description':
+      '앱 전체 메뉴와 기능 텍스트를 표시할 언어를 선택합니다.',
+    'language.english': '영어',
+    'language.japanese': '일본어',
+    'language.korean': '한국어',
+    'language.title': '언어',
+    'library.importPdf': '＋ PDF 가져오기',
+    'library.search': '검색',
+    'library.setlists': '셋리스트',
+    'library.settings': '설정',
+    'library.title': '라이브러리',
+    'search.all': '전체',
+    'search.artist': '아티스트',
+    'search.emptyQuery': '검색어를 입력하세요.',
+    'search.emptyResults': '검색 결과가 없습니다.',
+    'search.ocr': 'OCR',
+    'search.placeholder': '곡, 아티스트, 태그, 악보 내용 검색',
+    'search.tag': '태그',
+    'search.title': '검색',
+    'search.titleScope': '제목',
+    'setlists.addFromLibrary': '라이브러리에서 추가',
+    'setlists.create': '새 셋리스트',
+    'setlists.createPrompt': '셋리스트 이름을 입력하세요.',
+    'setlists.deleteTitle': '셋리스트 삭제',
+    'setlists.deleteConfirm': '이 셋리스트를 삭제할까요?',
+    'setlists.editDate': '날짜 수정',
+    'setlists.editEventName': '행사명 수정',
+    'setlists.editName': '이름 수정',
+    'setlists.empty': '셋리스트가 없습니다.',
+    'setlists.renameDatePrompt': 'YYYY-MM-DD',
+    'setlists.selectedEmpty': '셋리스트를 선택하거나 새로 만드세요.',
+    'setlists.order': '곡 순서',
+    'setlists.title': '셋리스트',
+    'settings.account': '계정',
+    'settings.accountSubtitle': '로그인과 계정 관리',
+    'settings.appSettings': '앱 설정',
+    'settings.autoCropMargin': 'Auto Crop Margin',
+    'settings.cloudSync': '클라우드 동기화',
+    'settings.developerMode': 'Developer Mode',
+    'settings.displaySettings': '화면 설정',
+    'settings.displaySubtitle': '테마, 글자 크기, PDF 보기',
+    'settings.defaultNavigationMode': 'Default Navigation Mode',
+    'settings.defaultPageLayout': 'Default Page Layout',
+    'settings.defaultZoom': 'Default Zoom',
+    'settings.feedback': '피드백',
+    'settings.feedbackSubtitle': '버그 제보, 기능 제안, 문의',
+    'settings.fontSize': 'Font Size',
+    'settings.homeSectionApp': '앱 설정',
+    'settings.homeSectionSupport': '지원',
+    'settings.language': '언어',
+    'settings.languageDescription': '메뉴와 기능 텍스트 언어',
+    'settings.languageTitle': '언어 설정',
+    'settings.languageValueEn': '영어',
+    'settings.languageValueJa': '일본어',
+    'settings.languageValueKo': '한국어',
+    'settings.languageValueLabel': '현재 언어',
+    'settings.subscription': '구독',
+    'settings.subscriptionSubtitle': '플랜과 결제 관리',
+    'settings.sync': '클라우드 동기화',
+    'settings.syncSubtitle': '백업과 네트워크 사용',
+    'settings.landscapeLock': 'Landscape Lock',
+    'settings.theme': 'Theme',
+    'settings.title': '설정',
+    'settings.versionInfo': '버전 정보',
+    'settings.versionSubtitle': '앱 버전, 릴리스 노트, 라이선스',
+    'subscription.currentPlan': '현재 플랜',
+    'subscription.freePlan': 'Free',
+    'subscription.manageBilling': '결제 관리 링크',
+    'subscription.premiumPlan': 'Premium',
+    'subscription.redeem': '리딤',
+    'subscription.redeemDescription':
+      'MuList 리딤 코드를 입력하면 Premium 권한이 계정에 적용됩니다.',
+    'subscription.redeemInvalid': '유효하지 않거나 만료된 리딤 코드입니다.',
+    'subscription.redeemPlaceholder': '리딤 코드 입력',
+    'subscription.redeemRateLimited':
+      '시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+    'subscription.redeemSignInRequired':
+      '리딤 코드를 사용하려면 먼저 로그인해 주세요.',
+    'subscription.redeemSuccess': 'Premium이 활성화되었습니다.',
+    'subscription.redeemTitle': '리딤 코드',
+    'subscription.restorePurchases': '구독 복원',
+    'subscription.startSubscription': '구독 시작',
+    'subscription.title': '구독',
+    'subscription.unavailable': '구독 기능은 아직 연결되지 않았습니다.',
+    'version.build': 'Build',
+    'version.legal': 'Legal',
+    'version.openSourceLicenses': 'Open Source Licenses',
+    'version.releaseNotes': 'Release Notes',
+    'version.title': '버전 정보',
+    'version.unavailable':
+      'Terms of Service와 Privacy Policy는 공개 URL 확정 후 연결됩니다.',
+    'viewer.drawing': '그리기',
+    'viewer.eraser': '지우개',
+    'viewer.highlighter': '형광펜',
+    'viewer.hideMenu': '메뉴 숨기기',
+    'viewer.menu': '메뉴',
+    'viewer.navigationMode': '이동 방식',
+    'viewer.pageView': '페이지 보기',
+    'viewer.pen': '펜',
+    'viewer.scoreSettings': '악보 설정',
+    'viewer.scroll': '상하 스크롤',
+    'viewer.scrollHorizontal': '좌우 스크롤',
+    'viewer.snapHorizontal': '좌우 스냅',
+    'viewer.setlist': '셋리스트',
+    'viewer.singlePage': '1쪽',
+    'viewer.snapVertical': '상하 스냅',
+    'viewer.title': '악보 뷰어',
+    'viewer.twoPage': '2쪽',
+    'viewer.view': '보기',
+    'viewer.zoomIn': '확대',
+    'viewer.zoomOut': '축소',
+  },
+  en: {
+    'common.backToLibrary': '‹ Library',
+    'common.backToSettings': '‹ Settings',
+    'common.cancel': 'Cancel',
+    'common.delete': 'Delete',
+    'common.confirm': 'OK',
+    'common.loading': 'Working…',
+    'common.none': '-',
+    'account.appleLogin': 'Sign in with Apple',
+    'account.cloudNotice': 'Cloud features are available after sign-in.',
+    'account.deleteAccount': 'Delete account',
+    'account.deleteConfirmBody':
+      'This will permanently delete your Firebase account. A recent sign-in may be required.',
+    'account.deleteConfirmTitle': 'Delete account',
+    'account.email': 'Email',
+    'account.emailPlaceholder': 'email@example.com',
+    'account.emailStart': 'Get started with email',
+    'account.firebaseUid': 'Firebase UID',
+    'account.googleLogin': 'Sign in with Google',
+    'account.login': 'Sign in',
+    'account.loginMethod': 'Sign-in method',
+    'account.logout': 'Sign out',
+    'account.notSignedIn': 'Not signed in',
+    'account.passwordPlaceholder': 'Password (6+ characters)',
+    'account.register': 'Sign up',
+    'account.signInWithEmail': 'Get started with email',
+    'account.title': 'Account',
+    'display.autoCropDescription':
+      'Automatically trim blank margins around scores.',
+    'display.defaultNavigationMode': 'Default Navigation Mode',
+    'display.defaultNavigationModeDescription':
+      'Choose the default way to move through scores.',
+    'display.defaultPageLayout': 'Default Page Layout',
+    'display.defaultPageLayoutDescription':
+      'Choose the default page layout when opening scores.',
+    'display.defaultZoom': 'Default Zoom',
+    'display.defaultZoomDescription':
+      'Choose the default zoom level when opening PDFs.',
+    'display.fontSize': 'Font Size',
+    'display.fontSizeDescription':
+      'Choose the text size used in lists and settings.',
+    'display.fontLarge': 'Large',
+    'display.fontMedium': 'Medium',
+    'display.fontSmall': 'Small',
+    'display.landscapeLock': 'Landscape Lock',
+    'display.landscapeLockDescription':
+      'Lock the PDF viewer to landscape orientation.',
+    'display.pencilSmoothing': 'Apple Pencil Curve Smoothing',
+    'display.pencilSmoothingDescription':
+      '0 disables smoothing and 10 applies the strongest correction.',
+    'display.themeDark': 'Dark',
+    'display.themeLight': 'Light',
+    'display.themeSystem': 'System',
+    'display.theme': 'Theme',
+    'display.themeDescription': 'Choose the app color mode.',
+    'developer.createTestSetlist': 'Create Test Setlist',
+    'developer.createTestSong': 'Create Test Song',
+    'developer.database': 'Database',
+    'developer.description': 'Shows diagnostics and test tools.',
+    'developer.debug': 'Debug',
+    'developer.loadingError': 'Operation failed.',
+    'developer.ocr': 'OCR',
+    'developer.packageUsage': 'Song Package / Storage Usage',
+    'developer.resetConfirmBody': 'This will delete all songs and setlists.',
+    'developer.resetConfirmTitle': 'Reset Database',
+    'developer.resetDatabase': 'Reset Database',
+    'developer.rerunOcr': 'Force OCR rerun',
+    'developer.stats': 'Song count / database info',
+    'developer.storage': 'Storage',
+    'developer.sync': 'Sync',
+    'developer.syncStatus': 'Sync status: sync queue not configured',
+    'developer.title': 'Developer Mode',
+    'developer.viewOcrResult': 'View OCR results',
+    'feedback.bodyPrompt': 'Please enter your message.',
+    'feedback.bugReport': 'Report a bug',
+    'feedback.contact': 'Contact us',
+    'feedback.description': 'Tell us what happened and how to reproduce it.',
+    'feedback.diagnosticsTitle': 'Included diagnostics',
+    'feedback.featureRequest': 'Suggest a feature',
+    'feedback.intro':
+      'Opens your mail app to send feedback. App and device details are attached automatically for troubleshooting.',
+    'feedback.title': 'Feedback',
+    'language.description':
+      'Choose the language used for all menus and feature text.',
+    'language.english': 'English',
+    'language.japanese': 'Japanese',
+    'language.korean': 'Korean',
+    'language.title': 'Language',
+    'library.importPdf': '＋ Import PDF',
+    'library.search': 'Search',
+    'library.setlists': 'Setlists',
+    'library.settings': 'Settings',
+    'library.title': 'Library',
+    'search.all': 'All',
+    'search.artist': 'Artist',
+    'search.emptyQuery': 'Enter a search term.',
+    'search.emptyResults': 'No results found.',
+    'search.ocr': 'OCR',
+    'search.placeholder': 'Search songs, artists, tags, or score text',
+    'search.tag': 'Tag',
+    'search.title': 'Search',
+    'search.titleScope': 'Title',
+    'setlists.addFromLibrary': 'Add from Library',
+    'setlists.create': 'New Setlist',
+    'setlists.createPrompt': 'Enter a setlist name.',
+    'setlists.deleteTitle': 'Delete Setlist',
+    'setlists.deleteConfirm': 'Delete this setlist?',
+    'setlists.editDate': 'Edit Date',
+    'setlists.editEventName': 'Edit Event Name',
+    'setlists.editName': 'Rename',
+    'setlists.empty': 'No setlists yet.',
+    'setlists.renameDatePrompt': 'YYYY-MM-DD',
+    'setlists.selectedEmpty': 'Select a setlist or create a new one.',
+    'setlists.order': 'Song Order',
+    'setlists.title': 'Setlists',
+    'settings.account': 'Account',
+    'settings.accountSubtitle': 'Sign-in and account management',
+    'settings.appSettings': 'App Settings',
+    'settings.autoCropMargin': 'Auto Crop Margin',
+    'settings.cloudSync': 'Cloud Sync',
+    'settings.developerMode': 'Developer Mode',
+    'settings.displaySettings': 'Display',
+    'settings.displaySubtitle': 'Theme, font size, and PDF viewing',
+    'settings.defaultNavigationMode': 'Default Navigation Mode',
+    'settings.defaultPageLayout': 'Default Page Layout',
+    'settings.defaultZoom': 'Default Zoom',
+    'settings.feedback': 'Feedback',
+    'settings.feedbackSubtitle': 'Bug reports, feature requests, and support',
+    'settings.fontSize': 'Font Size',
+    'settings.homeSectionApp': 'App Settings',
+    'settings.homeSectionSupport': 'Support',
+    'settings.language': 'Language',
+    'settings.languageDescription': 'Language for menus and feature text',
+    'settings.languageTitle': 'Language Settings',
+    'settings.languageValueEn': 'English',
+    'settings.languageValueJa': 'Japanese',
+    'settings.languageValueKo': 'Korean',
+    'settings.languageValueLabel': 'Current language',
+    'settings.subscription': 'Subscription',
+    'settings.subscriptionSubtitle': 'Plans and billing',
+    'settings.sync': 'Cloud Sync',
+    'settings.syncSubtitle': 'Backup and network usage',
+    'settings.landscapeLock': 'Landscape Lock',
+    'settings.theme': 'Theme',
+    'settings.title': 'Settings',
+    'settings.versionInfo': 'Version Info',
+    'settings.versionSubtitle': 'App version, release notes, and licenses',
+    'subscription.currentPlan': 'Current Plan',
+    'subscription.freePlan': 'Free',
+    'subscription.manageBilling': 'Manage billing link',
+    'subscription.premiumPlan': 'Premium',
+    'subscription.redeem': 'Redeem',
+    'subscription.redeemDescription':
+      'Enter a MuList redeem code to activate Premium for your account.',
+    'subscription.redeemInvalid': 'This redeem code is invalid or expired.',
+    'subscription.redeemPlaceholder': 'Enter redeem code',
+    'subscription.redeemRateLimited':
+      'Too many attempts. Please try again shortly.',
+    'subscription.redeemSignInRequired': 'Sign in before redeeming a code.',
+    'subscription.redeemSuccess': 'Premium has been activated.',
+    'subscription.redeemTitle': 'Redeem Code',
+    'subscription.restorePurchases': 'Restore purchases',
+    'subscription.startSubscription': 'Start subscription',
+    'subscription.title': 'Subscription',
+    'subscription.unavailable': 'Subscription features are not connected yet.',
+    'version.build': 'Build',
+    'version.legal': 'Legal',
+    'version.openSourceLicenses': 'Open Source Licenses',
+    'version.releaseNotes': 'Release Notes',
+    'version.title': 'Version Info',
+    'version.unavailable':
+      'Terms of Service and Privacy Policy will be linked after the public URLs are finalized.',
+    'viewer.drawing': 'Drawing',
+    'viewer.eraser': 'Eraser',
+    'viewer.highlighter': 'Highlighter',
+    'viewer.hideMenu': 'Hide Menu',
+    'viewer.menu': 'Menu',
+    'viewer.navigationMode': 'Navigation Mode',
+    'viewer.pageView': 'Page View',
+    'viewer.pen': 'Pen',
+    'viewer.scoreSettings': 'Score Settings',
+    'viewer.scroll': 'Vertical Scroll',
+    'viewer.scrollHorizontal': 'Horizontal Scroll',
+    'viewer.snapHorizontal': 'Horizontal Snap',
+    'viewer.setlist': 'Setlist',
+    'viewer.singlePage': '1 page',
+    'viewer.snapVertical': 'Vertical Snap',
+    'viewer.title': 'Score Viewer',
+    'viewer.twoPage': '2 pages',
+    'viewer.view': 'View',
+    'viewer.zoomIn': 'Zoom in',
+    'viewer.zoomOut': 'Zoom out',
+  },
+  ja: {
+    'common.backToLibrary': '‹ ライブラリ',
+    'common.backToSettings': '‹ 設定',
+    'common.cancel': 'キャンセル',
+    'common.delete': '削除',
+    'common.confirm': '確認',
+    'common.loading': '処理中…',
+    'common.none': '-',
+    'account.appleLogin': 'Appleでサインイン',
+    'account.cloudNotice': 'Cloud 機能はサインイン後に利用できます。',
+    'account.deleteAccount': 'アカウント削除',
+    'account.deleteConfirmBody':
+      'Firebaseアカウントを完全に削除します。最近のログインが必要な場合があります。',
+    'account.deleteConfirmTitle': 'アカウント削除',
+    'account.email': 'メールアドレス',
+    'account.emailPlaceholder': 'email@example.com',
+    'account.emailStart': 'メールで始める',
+    'account.firebaseUid': 'Firebase UID',
+    'account.googleLogin': 'Googleでログイン',
+    'account.login': 'ログイン',
+    'account.loginMethod': 'ログイン方法',
+    'account.logout': 'ログアウト',
+    'account.notSignedIn': '未ログイン',
+    'account.passwordPlaceholder': 'パスワード（6文字以上）',
+    'account.register': '登録',
+    'account.signInWithEmail': 'メールで始める',
+    'account.title': 'アカウント',
+    'display.autoCropDescription': '楽譜の余白を自動で調整します。',
+    'display.defaultNavigationMode': 'Default Navigation Mode',
+    'display.defaultNavigationModeDescription':
+      '楽譜を送るときの既定の移動方法です。',
+    'display.defaultPageLayout': 'Default Page Layout',
+    'display.defaultPageLayoutDescription':
+      '楽譜を開くときの既定ページ表示です。',
+    'display.defaultZoom': 'Default Zoom',
+    'display.defaultZoomDescription': 'PDFを開く時の既定ズーム倍率です。',
+    'display.fontSize': 'Font Size',
+    'display.fontSizeDescription': '一覧と設定画面で使う文字サイズです。',
+    'display.fontLarge': '大',
+    'display.fontMedium': '中',
+    'display.fontSmall': '小',
+    'display.landscapeLock': 'Landscape Lock',
+    'display.landscapeLockDescription': 'PDF Viewerを横向きに固定します。',
+    'display.pencilSmoothing': 'Apple Pencil 曲線補正',
+    'display.pencilSmoothingDescription':
+      '0は補正なし、10は最も強い曲線補正です。',
+    'display.themeDark': 'ダーク',
+    'display.themeLight': 'ライト',
+    'display.themeSystem': 'システム',
+    'display.theme': 'Theme',
+    'display.themeDescription': 'アプリの既定の配色モードを選択します。',
+    'developer.createTestSetlist': 'テストSetlistを作成',
+    'developer.createTestSong': 'テストSongを作成',
+    'developer.database': 'Database',
+    'developer.description': '診断とテスト用ツールを表示します。',
+    'developer.debug': 'Debug',
+    'developer.loadingError': '処理に失敗しました。',
+    'developer.ocr': 'OCR',
+    'developer.packageUsage': 'Song Package / 使用量を見る',
+    'developer.resetConfirmBody': 'すべてのSongとSetlistを削除します。',
+    'developer.resetConfirmTitle': 'Databaseを初期化',
+    'developer.resetDatabase': 'Databaseを初期化',
+    'developer.rerunOcr': 'OCRを強制再実行',
+    'developer.stats': 'Song数 / Database情報',
+    'developer.storage': 'Storage',
+    'developer.sync': 'Sync',
+    'developer.syncStatus': 'Sync状態: Sync Queue未構成',
+    'developer.title': 'Developer Mode',
+    'developer.viewOcrResult': 'OCR結果を見る',
+    'feedback.bodyPrompt': '内容を入力してください。',
+    'feedback.bugReport': 'バグ報告',
+    'feedback.contact': 'お問い合わせ',
+    'feedback.description': '起きたことと再現手順を教えてください。',
+    'feedback.diagnosticsTitle': '含まれる診断情報',
+    'feedback.featureRequest': '機能提案',
+    'feedback.intro':
+      'メールアプリを開いて意見を送ります。問題解決のため、アプリと端末情報が自動で含まれます。',
+    'feedback.title': 'フィードバック',
+    'language.description':
+      'アプリ全体のメニューと機能テキストの表示言語を選びます。',
+    'language.english': '英語',
+    'language.japanese': '日本語',
+    'language.korean': '韓国語',
+    'language.title': '言語',
+    'library.importPdf': '＋ PDFを取り込む',
+    'library.search': '検索',
+    'library.setlists': 'セットリスト',
+    'library.settings': '設定',
+    'library.title': 'ライブラリ',
+    'search.all': 'すべて',
+    'search.artist': 'アーティスト',
+    'search.emptyQuery': '検索語を入力してください。',
+    'search.emptyResults': '結果がありません。',
+    'search.ocr': 'OCR',
+    'search.placeholder': '曲、アーティスト、タグ、楽譜内容を検索',
+    'search.tag': 'タグ',
+    'search.title': '検索',
+    'search.titleScope': 'タイトル',
+    'setlists.addFromLibrary': 'ライブラリから追加',
+    'setlists.create': '新しいセットリスト',
+    'setlists.createPrompt': 'セットリスト名を入力してください。',
+    'setlists.deleteTitle': 'セットリストを削除',
+    'setlists.deleteConfirm': 'このセットリストを削除しますか？',
+    'setlists.editDate': '日付を変更',
+    'setlists.editEventName': 'イベント名を変更',
+    'setlists.editName': '名前を変更',
+    'setlists.empty': 'セットリストがありません。',
+    'setlists.renameDatePrompt': 'YYYY-MM-DD',
+    'setlists.selectedEmpty':
+      'セットリストを選択するか、新しく作成してください。',
+    'setlists.order': '曲順',
+    'setlists.title': 'セットリスト',
+    'settings.account': 'アカウント',
+    'settings.accountSubtitle': 'サインインとアカウント管理',
+    'settings.appSettings': 'アプリ設定',
+    'settings.autoCropMargin': 'Auto Crop Margin',
+    'settings.cloudSync': 'クラウド同期',
+    'settings.developerMode': 'Developer Mode',
+    'settings.displaySettings': '表示設定',
+    'settings.displaySubtitle': 'テーマ、文字サイズ、PDF表示',
+    'settings.defaultNavigationMode': 'Default Navigation Mode',
+    'settings.defaultPageLayout': 'Default Page Layout',
+    'settings.defaultZoom': 'Default Zoom',
+    'settings.feedback': 'フィードバック',
+    'settings.feedbackSubtitle': '不具合報告、機能提案、問い合わせ',
+    'settings.fontSize': 'Font Size',
+    'settings.homeSectionApp': 'アプリ設定',
+    'settings.homeSectionSupport': 'サポート',
+    'settings.language': '言語',
+    'settings.languageDescription': 'メニューと機能テキストの言語',
+    'settings.languageTitle': '言語設定',
+    'settings.languageValueEn': '英語',
+    'settings.languageValueJa': '日本語',
+    'settings.languageValueKo': '韓国語',
+    'settings.languageValueLabel': '現在の言語',
+    'settings.subscription': 'サブスクリプション',
+    'settings.subscriptionSubtitle': 'プランと支払い管理',
+    'settings.sync': 'クラウド同期',
+    'settings.syncSubtitle': 'バックアップとネットワーク使用',
+    'settings.landscapeLock': 'Landscape Lock',
+    'settings.theme': 'Theme',
+    'settings.title': '設定',
+    'settings.versionInfo': 'バージョン情報',
+    'settings.versionSubtitle':
+      'アプリのバージョン、リリースノート、ライセンス',
+    'subscription.currentPlan': '現在のプラン',
+    'subscription.freePlan': 'Free',
+    'subscription.manageBilling': '支払い管理リンク',
+    'subscription.premiumPlan': 'Premium',
+    'subscription.redeem': '交換',
+    'subscription.redeemDescription':
+      'MuListのコードを入力するとPremiumが有効になります。',
+    'subscription.redeemInvalid': '無効または期限切れのコードです。',
+    'subscription.redeemPlaceholder': 'コードを入力',
+    'subscription.redeemRateLimited':
+      '試行回数が多すぎます。しばらくしてから再試行してください。',
+    'subscription.redeemSignInRequired':
+      'コードを使用するにはログインしてください。',
+    'subscription.redeemSuccess': 'Premiumが有効になりました。',
+    'subscription.redeemTitle': 'コード交換',
+    'subscription.restorePurchases': '購入を復元',
+    'subscription.startSubscription': 'サブスクリプション開始',
+    'subscription.title': 'サブスクリプション',
+    'subscription.unavailable':
+      'サブスクリプション機能はまだ接続されていません。',
+    'version.build': 'Build',
+    'version.legal': 'Legal',
+    'version.openSourceLicenses': 'Open Source Licenses',
+    'version.releaseNotes': 'Release Notes',
+    'version.title': 'バージョン情報',
+    'version.unavailable':
+      '利用規約とプライバシーポリシーは公開URL確定後にリンクします。',
+    'viewer.drawing': '描画',
+    'viewer.eraser': '消しゴム',
+    'viewer.highlighter': '蛍光ペン',
+    'viewer.hideMenu': 'メニューを隠す',
+    'viewer.menu': 'メニュー',
+    'viewer.navigationMode': '移動方法',
+    'viewer.pageView': 'ページ表示',
+    'viewer.pen': 'ペン',
+    'viewer.scoreSettings': '楽譜設定',
+    'viewer.scroll': '縦スクロール',
+    'viewer.scrollHorizontal': '横スクロール',
+    'viewer.snapHorizontal': '横スナップ',
+    'viewer.setlist': 'セットリスト',
+    'viewer.singlePage': '1ページ',
+    'viewer.snapVertical': '縦スナップ',
+    'viewer.title': '楽譜ビューア',
+    'viewer.twoPage': '2ページ',
+    'viewer.view': '表示',
+    'viewer.zoomIn': '拡大',
+    'viewer.zoomOut': '縮小',
+  },
+};
+
+let currentLanguage: AppLanguage = 'ko';
+
+export function setAppLanguage(language: AppLanguage): void {
+  currentLanguage = language;
+}
+
+export function getAppLanguage(): AppLanguage {
+  return currentLanguage;
+}
+
+export function getLanguageNames(): Record<AppLanguage, string> {
+  return languageNames;
+}
+
+export function t(key: TranslationKey): string {
+  return dictionaries[currentLanguage][key] ?? dictionaries.ko[key];
+}

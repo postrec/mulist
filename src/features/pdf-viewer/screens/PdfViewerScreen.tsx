@@ -3,33 +3,47 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { Song } from '../../../domain/models';
+import type {
+  ScoreNavigationMode,
+  ScoreViewState,
+  Setlist,
+  Song,
+} from '../../../domain/models';
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
+import { SCREEN_HEADER_HEIGHT } from '../../../shared/layout/metrics';
 import { useAppSettings } from '../../settings/context/AppSettingsContext';
 import { MusicControls } from '../../music/components/MusicControls';
-import {
-  AnnotationCanvas,
-  type AnnotationTool,
-} from '../components/AnnotationCanvas';
-import { PdfToolbar } from '../components/PdfToolbar';
+import type { AnnotationTool } from '../components/AnnotationCanvas';
 import { PdfJsViewer } from '../components/PdfJsViewer';
+import { SetlistQuickPanel } from '../components/SetlistQuickPanel';
 import {
   ScoreSettingsModal,
   type ScoreMetadata,
 } from '../components/ScoreSettingsModal';
-import { type PageLayout, ViewerControls } from '../components/ViewerControls';
+import type { PageLayout } from '../components/ViewerControls';
+import {
+  DrawingToolbar,
+  HideMenuButton,
+  ShowMenuButton,
+  ViewerMenuBar,
+} from '../components/ViewerMenus';
 import { usePdfViewer } from '../hooks/usePdfViewer';
 
 interface PdfViewerScreenProps {
+  backLabel?: string;
   onBack: () => void;
+  onSetlistSongSelect?: (song: Song) => void;
   onSongUpdate: (song: Song) => void;
+  setlist?: Setlist | null;
+  setlistSongs?: readonly Song[];
   song: Song;
 }
 
@@ -38,18 +52,39 @@ const MAX_ZOOM = 250;
 const ZOOM_STEP = 25;
 
 export function PdfViewerScreen({
+  backLabel,
   onBack,
+  onSetlistSongSelect,
   onSongUpdate,
+  setlist = null,
+  setlistSongs = [],
   song,
 }: PdfViewerScreenProps) {
+  useAppLanguage();
   const viewer = usePdfViewer(song);
   const { settings } = useAppSettings();
   const [tool, setTool] = useState<AnnotationTool | null>(null);
+  const [penColor, setPenColor] = useState('#C62828');
+  const [highlighterColor, setHighlighterColor] = useState('#FFE066');
   const [layout, setLayout] = useState<PageLayout>('single');
   const [zoom, setZoom] = useState(() =>
     clampZoom(Math.round(settings.defaultZoom * 100)),
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [navigationMode, setNavigationMode] =
+    useState<ScoreNavigationMode>('scroll');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isMenuVisible, setIsMenuVisible] = useState(true);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isDrawingOpen, setIsDrawingOpen] = useState(false);
+  const [isViewStateReady, setIsViewStateReady] = useState(false);
+
+  useEffect(() => {
+    setIsViewStateReady(false);
+    setTool(null);
+    setIsDrawingOpen(false);
+    setIsViewOpen(false);
+  }, [song.id]);
 
   useEffect(() => {
     if (settings.landscapeLock) {
@@ -64,6 +99,19 @@ export function PdfViewerScreen({
     };
   }, [settings.landscapeLock]);
 
+  useEffect(() => {
+    if (!viewer.score) return;
+    setLayout(viewer.score.viewState.layout);
+    setNavigationMode(viewer.score.viewState.navigationMode);
+    setCurrentPage(viewer.score.viewState.currentPage);
+    setIsViewStateReady(true);
+  }, [viewer.score]);
+
+  const updateViewState = (changes: Partial<ScoreViewState>) => {
+    if (!viewer.score) return;
+    void viewer.saveViewState({ ...viewer.score.viewState, ...changes });
+  };
+
   const saveMetadata = async (metadata: ScoreMetadata) => {
     const updatedSong = await viewer.saveMetadata(metadata);
     onSongUpdate(updatedSong);
@@ -76,63 +124,135 @@ export function PdfViewerScreen({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onBack}
-          style={styles.backButton}
-        >
-          <Text style={styles.backLabel}>‹ 라이브러리</Text>
-        </Pressable>
-        <View style={styles.heading}>
-          <Text numberOfLines={1} style={styles.title}>
-            {song.title}
-          </Text>
-          <Text numberOfLines={1} style={styles.artist}>
-            {song.artist}
-          </Text>
+      {isMenuVisible ? (
+        <View style={styles.header}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onBack}
+            style={styles.backButton}
+          >
+            <Text style={styles.backLabel}>
+              {backLabel ?? t('common.backToLibrary')}
+            </Text>
+          </Pressable>
+          <View style={styles.heading}>
+            <Text numberOfLines={1} style={styles.title}>
+              {song.title}
+            </Text>
+            <Text numberOfLines={1} style={styles.artist}>
+              {song.artist}
+            </Text>
+          </View>
+          <View style={[styles.controlsScroller, styles.controls]}>
+            <ViewerMenuBar
+              drawingOpen={isDrawingOpen}
+              layout={layout}
+              navigationMode={navigationMode}
+              onCloseView={() => setIsViewOpen(false)}
+              onLayoutChange={(next) => {
+                setLayout(next);
+                setIsViewOpen(false);
+                updateViewState({ layout: next });
+              }}
+              onNavigationChange={(next) => {
+                setNavigationMode(next);
+                setIsViewOpen(false);
+                updateViewState({ navigationMode: next });
+              }}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onToggleDrawing={() => {
+                setIsDrawingOpen((current) => {
+                  if (current) setTool(null);
+                  return !current;
+                });
+                setIsViewOpen(false);
+              }}
+              onToggleView={() => {
+                setIsViewOpen((current) => !current);
+                setIsDrawingOpen(false);
+                setTool(null);
+              }}
+              onZoomIn={() =>
+                setZoom((current) => clampZoom(current + ZOOM_STEP))
+              }
+              onZoomOut={() =>
+                setZoom((current) => clampZoom(current - ZOOM_STEP))
+              }
+              zoom={zoom}
+              viewOpen={isViewOpen}
+            />
+            <MusicControls
+              initialBpm={song.bpm}
+              onBpmChange={(bpm) => void saveBpm(bpm)}
+            />
+            <HideMenuButton
+              onPress={() => {
+                setIsMenuVisible(false);
+                setIsViewOpen(false);
+              }}
+            />
+          </View>
         </View>
-        <ScrollView
-          contentContainerStyle={styles.controls}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.controlsScroller}
-        >
-          <ViewerControls
-            layout={layout}
-            onLayoutChange={setLayout}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-            onZoomIn={() =>
-              setZoom((current) => clampZoom(current + ZOOM_STEP))
-            }
-            onZoomOut={() =>
-              setZoom((current) => clampZoom(current - ZOOM_STEP))
-            }
-            zoom={zoom}
-          />
-          <MusicControls
-            initialBpm={song.bpm}
-            onBpmChange={(bpm) => void saveBpm(bpm)}
-          />
-          <PdfToolbar onSelect={setTool} selected={tool} />
-        </ScrollView>
-      </View>
+      ) : null}
 
+      {!isMenuVisible ? (
+        <ShowMenuButton onPress={() => setIsMenuVisible(true)} />
+      ) : null}
       {viewer.isLoading ? (
         <ActivityIndicator color={colors.primary} style={styles.center} />
-      ) : viewer.score ? (
+      ) : viewer.score && isViewStateReady ? (
         <View style={styles.viewerContainer}>
           <PdfJsViewer
+            drawingColor={tool === 'highlighter' ? highlighterColor : penColor}
+            drawingTool={
+              tool === 'pen' || tool === 'highlighter' || tool === 'eraser'
+                ? tool
+                : null
+            }
             fileUri={viewer.score.pdfFile}
+            initialPage={currentPage}
             layout={layout}
+            menuVisible={isMenuVisible}
+            navigationMode={navigationMode}
+            noteLayer={viewer.noteLayer}
+            onNoteLayerChange={(noteLayer) =>
+              void viewer.saveNoteLayer(noteLayer)
+            }
+            onTap={(page) => {
+              if (isMenuVisible) {
+                setIsMenuVisible(false);
+              } else if (page === null) {
+                setIsMenuVisible(true);
+              } else {
+                setCurrentPage(page);
+                updateViewState({ currentPage: page });
+              }
+            }}
+            onPageChange={(page) => {
+              setCurrentPage(page);
+              updateViewState({ currentPage: page });
+            }}
             onZoomChange={(nextZoom) => setZoom(clampZoom(nextZoom))}
+            pencilSmoothing={settings.applePencilSmoothing}
             zoom={zoom}
           />
-          {tool ? (
-            <AnnotationCanvas
-              noteLayer={viewer.noteLayer}
-              onChange={(layer) => void viewer.saveNoteLayer(layer)}
-              tool={tool}
+          {isDrawingOpen ? (
+            <DrawingToolbar
+              color={tool === 'highlighter' ? highlighterColor : penColor}
+              onColorSelect={(color) => {
+                if (tool === 'highlighter') setHighlighterColor(color);
+                else setPenColor(color);
+              }}
+              onSelect={setTool}
+              selected={tool}
+            />
+          ) : null}
+          {setlist && onSetlistSongSelect ? (
+            <SetlistQuickPanel
+              currentSongId={song.id}
+              onSongPress={onSetlistSongSelect}
+              setlist={setlist}
+              songs={setlistSongs}
             />
           ) : null}
         </View>
@@ -156,7 +276,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: 'row',
-    height: 48,
+    height: SCREEN_HEADER_HEIGHT,
     paddingHorizontal: 10,
   },
   backButton: { paddingVertical: 9, width: 92 },
@@ -168,7 +288,10 @@ const styles = StyleSheet.create({
   controls: {
     alignItems: 'center',
     flexDirection: 'row',
+    flex: 1,
     gap: 8,
+    justifyContent: 'space-between',
+    minWidth: 0,
     paddingRight: 8,
   },
   viewerContainer: {

@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { Song } from '../../domain/models';
+import { resolveTagId } from '../../domain/tagPresets';
 import type { SearchScope } from '../../features/search/types';
 import { parseStringArray } from '../serialization';
 
@@ -27,13 +28,16 @@ export class SearchRepository {
     const normalized = query.trim();
     if (!normalized) return [];
     const pattern = `%${escapeLike(normalized)}%`;
+    const tagPattern = `%${escapeLike(resolveTagId(normalized))}%`;
     const condition = getCondition(scope);
     const rows = await this.database.getAllAsync<SearchRow>(
       `SELECT s.* FROM songs s
        JOIN song_search_index i ON i.song_id = s.id
        WHERE s.deleted_at IS NULL AND (${condition})
        ORDER BY s.updated_at DESC`,
-      ...(scope === 'all' ? [pattern, pattern, pattern, pattern] : [pattern]),
+      ...(scope === 'all'
+        ? [pattern, pattern, tagPattern, pattern]
+        : [scope === 'tag' ? tagPattern : pattern]),
     );
     return rows.map(toSong);
   }

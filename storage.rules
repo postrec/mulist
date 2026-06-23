@@ -2,8 +2,15 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{path=**} {
-      allow read, write: if false;
+    function owns(uid) { return request.auth != null && request.auth.uid == uid; }
+    function teamMember(teamId) {
+      return request.auth != null && firestore.exists(/databases/(default)/documents/teams/$(teamId)/members/$(request.auth.uid));
     }
+    function teamEditor(teamId) {
+      return teamMember(teamId) && firestore.get(/databases/(default)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role in ['owner', 'admin', 'editor'];
+    }
+    match /users/{uid}/{path=**} { allow read, write: if owns(uid); }
+    match /teams/{teamId}/{path=**} { allow read: if teamMember(teamId); allow write: if teamEditor(teamId); }
+    match /shares/{shareId}/{path=**} { allow read, write: if false; }
   }
 }

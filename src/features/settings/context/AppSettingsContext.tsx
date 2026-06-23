@@ -9,6 +9,7 @@ import {
 import { Appearance } from 'react-native';
 
 import { getRepositories } from '../../../storage';
+import { setAppLanguage } from '../../../shared/i18n';
 import { type AppSettings, defaultAppSettings } from '../domain/AppSettings';
 
 interface AppSettingsContextValue {
@@ -29,6 +30,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       .then((saved) => {
         setSettings(saved);
         applyTheme(saved.theme);
+        setAppLanguage(saved.language);
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -39,6 +41,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       const next = { ...settings, ...changes };
       setSettings(next);
       applyTheme(next.theme);
+      if (changes.language) setAppLanguage(next.language);
       await repositories.settings.save(next);
     },
     [settings],

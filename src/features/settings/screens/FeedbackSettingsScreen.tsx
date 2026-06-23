@@ -7,16 +7,19 @@ import {
   View,
 } from 'react-native';
 
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
 import { getAppDiagnostics } from '../services/appDiagnostics';
 
-type FeedbackType = '버그 제보' | '기능 제안' | '문의하기';
+type FeedbackType = 'bug' | 'feature' | 'contact';
 
 export function FeedbackSettingsScreen() {
+  useAppLanguage();
   const diagnostics = getAppDiagnostics();
   const send = async (type: FeedbackType) => {
     const body = [
-      '내용을 입력해 주세요.',
+      t('feedback.bodyPrompt'),
       '',
       '--- 진단 정보 ---',
       `App: ${diagnostics.appVersion}`,
@@ -24,34 +27,39 @@ export function FeedbackSettingsScreen() {
       `Device: ${diagnostics.deviceModel}`,
       `OS: ${diagnostics.osVersion}`,
     ].join('\n');
+    const subject =
+      type === 'bug'
+        ? t('feedback.bugReport')
+        : type === 'feature'
+          ? t('feedback.featureRequest')
+          : t('feedback.contact');
     await Linking.openURL(
-      `mailto:?subject=${encodeURIComponent(`[MuList] ${type}`)}&body=${encodeURIComponent(body)}`,
+      `mailto:?subject=${encodeURIComponent(`[MuList] ${subject}`)}&body=${encodeURIComponent(body)}`,
     );
   };
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <Text style={styles.intro}>
-        메일 앱을 열어 의견을 보냅니다. 문제 해결을 위해 앱과 기기 정보가 자동
-        포함됩니다.
-      </Text>
+      <Text style={styles.intro}>{t('feedback.intro')}</Text>
       <FeedbackButton
-        description="오류 상황과 재현 방법을 알려주세요."
-        label="버그 제보"
-        onPress={() => void send('버그 제보')}
+        description={t('feedback.description')}
+        label={t('feedback.bugReport')}
+        onPress={() => void send('bug')}
       />
       <FeedbackButton
-        description="연주 흐름을 개선할 아이디어를 알려주세요."
-        label="기능 제안"
-        onPress={() => void send('기능 제안')}
+        description={t('feedback.description')}
+        label={t('feedback.featureRequest')}
+        onPress={() => void send('feature')}
       />
       <FeedbackButton
-        description="MuList 사용에 관해 문의하세요."
-        label="문의하기"
-        onPress={() => void send('문의하기')}
+        description={t('feedback.description')}
+        label={t('feedback.contact')}
+        onPress={() => void send('contact')}
       />
       <View style={styles.diagnostics}>
-        <Text style={styles.diagnosticTitle}>포함되는 진단 정보</Text>
+        <Text style={styles.diagnosticTitle}>
+          {t('feedback.diagnosticsTitle')}
+        </Text>
         <Text style={styles.diagnosticText}>
           App {diagnostics.appVersion} ({diagnostics.buildNumber})
         </Text>

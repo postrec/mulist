@@ -1,5 +1,6 @@
 import type { OcrData, Score } from '../../../domain/models';
 import type { Repositories } from '../../../storage';
+import { reportError } from '../../../shared/logging/reportError';
 
 export interface OcrRecognizer {
   recognize(score: Score): Promise<OcrData>;
@@ -19,6 +20,7 @@ export async function processNextOcrJob(
     await repositories.scores.save({ ...score, ocrData });
     await repositories.ocr.complete(job.id);
   } catch (error: unknown) {
+    reportError(`OCR 처리 실패: ${job.scoreId}`, error);
     const message = error instanceof Error ? error.message : 'OCR 처리 실패';
     await repositories.ocr.fail(job.id, message);
   }

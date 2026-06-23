@@ -46,9 +46,6 @@ export function MusicControls({ initialBpm, onBpmChange }: MusicControlsProps) {
           {metronome.isPlaying ? '정지' : '메트로놈'}
         </Text>
       </Pressable>
-      <Pressable onPress={metronome.countIn} style={styles.button}>
-        <Text style={styles.label}>{metronome.countInBeat ?? 'Count In'}</Text>
-      </Pressable>
     </View>
   );
 }

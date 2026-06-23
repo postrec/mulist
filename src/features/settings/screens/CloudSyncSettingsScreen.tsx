@@ -1,16 +1,24 @@
 import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
 import { useAppSettings } from '../context/AppSettingsContext';
+import { runCloudSync } from '../../cloud/services/syncWorker';
 
 export function CloudSyncSettingsScreen() {
+  useAppLanguage();
   const { settings, update } = useAppSettings();
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <SwitchRow
-        description="로그인 후 Song Package를 Firebase에 자동 백업합니다."
-        label="Cloud Sync"
-        onChange={(cloudSyncEnabled) => void update({ cloudSyncEnabled })}
+        description={t('settings.syncSubtitle')}
+        label={t('settings.cloudSync')}
+        onChange={(cloudSyncEnabled) => {
+          void update({ cloudSyncEnabled }).then(() => {
+            if (cloudSyncEnabled) void runCloudSync();
+          });
+        }}
         value={settings.cloudSyncEnabled}
       />
       <SwitchRow
@@ -20,7 +28,7 @@ export function CloudSyncSettingsScreen() {
         value={settings.wifiOnlySync}
       />
       <Text style={styles.note}>
-        설정은 저장됩니다. 실제 업로드는 Sync Worker 구현 후 활성화됩니다.
+        로그인 상태에서 앱 시작·복귀·네트워크 재연결 시 자동으로 동기화됩니다.
       </Text>
     </ScrollView>
   );

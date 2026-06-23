@@ -23,27 +23,46 @@
       supports Korean, English, and Japanese. The persistent OCR pipeline, background
       worker, retries, storage, and search indexing are implemented, but Expo SDK 56's
       bundled Managed modules do not provide this recognition engine.
-- [ ] Verify page-anchored annotation coordinates with real multi-page PDFs. The
-      current native WebView overlay stores viewport-normalized points; a page-aware PDF
-      renderer may be required if annotations drift after PDF scrolling.
+- [ ] Verify the new page-anchored annotation canvases, Pencil scroll suppression, and
+      stabilized focal-point-preserving pinch zoom with real multi-page PDFs on the target iPad.
+      Legacy version 1 strokes have no page identity and intentionally fall back to
+      page 1; new version 2 strokes persist their page number.
+- [ ] Tune the default Apple Pencil smoothing value after comparing levels 0, 2, 5,
+      and 10 with real handwriting on the target iPad. The current default is 2.
+- [ ] Decide whether users can create and edit custom tag presets. The MVP currently
+      ships a fixed canonical preset list while preserving unknown legacy tag IDs.
 
 ## Firebase Setup
 
 - [x] Create Firebase project `mulist-sionuu` and register the iOS app with bundle
       identifier `com.mulist.app`.
 - [ ] Choose the Firestore and Storage region before creating production resources.
-- [ ] Enable Google and Apple authentication providers and complete the Apple Developer
-      configuration.
-- [ ] Configure Firestore Rules, Storage Rules, App Check, billing budget alerts, and
-      local Firebase Emulator coverage before production data is uploaded.
+- [ ] Enable Google and Apple authentication providers, create the Google Web OAuth
+      client ID, and complete Apple Developer configuration. The app adapters are ready.
+- [x] Implement and emulator-compile owner/team-scoped Firestore and Storage rules.
+- [ ] Reauthenticate Firebase CLI and deploy rules, Hosting, and Functions. The latest
+      2026-06-23 rules deployment was blocked because the CLI credentials expired again;
+      until rules are deployed, production sync returns `missing or insufficient permissions`.
+- [ ] Register the iOS development build with Firebase App Check (App Attest plus debug
+      provider for development), add its native configuration, then enable enforcement.
+- [ ] After App Check is configured, change the temporary `enforceAppCheck: false` on
+      sharing, friend, setlist-user, and redeem callables to `true` before production.
+- [ ] Deploy the new friend, setlist-user, sharing, and security-rule changes before
+      testing Social or collaborator invitations against production Firebase.
+- [ ] Confirm the Firebase project is on Blaze before deploying scheduled/callable
+      Functions, and configure billing budget alerts.
 - [ ] Decide whether StoreKit is integrated directly or through RevenueCat.
 
 ## Settings Dependencies
 
+- [ ] Deploy `redeemSubscriptionCode`, create the first code with
+      `cd functions && npm run redeem:generate`, and add the printed hashed document to
+      Firestore. Keep plaintext codes outside Firestore.
+
 - [ ] Configure StoreKit or RevenueCat product identifiers, purchase restoration, and
       the App Store subscription management URL before enabling payment actions.
-- [ ] Implement Sync Queue and Sync Log persistence before enabling Force Sync and
-      Sync Log actions in Developer Mode.
+- [ ] Connect the implemented Sync Queue/Sync Log schema to Force Sync and Sync Log
+      actions in Developer Mode.
 - [ ] Publish Terms of Service and Privacy Policy URLs before enabling Legal links.
 - [ ] Choose a public support email address; Feedback currently opens a prefilled mail
       draft without a recipient.
@@ -66,10 +85,15 @@
 - [ ] Replace the temporary Base64 PDF transfer with a chunked binary bridge if large
       Song Packages cause memory pressure. Base64 was chosen for reliable Expo Go
       WKWebView loading after local file access stalled on the target iPad.
+- [ ] Verify SQLite v6 viewer-state restoration, current-page tracking, horizontal
+      swipe snapping, the floating drawing toolbar, and menu hiding on the target
+      11-inch iPad.
+- [ ] Verify that Expo Go's WKWebView reports Apple Pencil input as Pointer Event
+      `pointerType: pen` on the target iPad. If that WebKit path is unavailable, move
+      Pencil capture to a native PencilKit view in an Expo Development Build.
 
 ## Runtime Warnings
 
-- [ ] Add AsyncStorage-backed Firebase Auth persistence when implementing the existing
-      Auth Session Persistence task. Auth currently uses memory persistence only.
-- [ ] Replace React Native's deprecated `SafeAreaView` usages with
-      `react-native-safe-area-context` in a dedicated compatibility pass.
+- [x] Add AsyncStorage-backed Firebase Auth persistence.
+- [x] Replace React Native's deprecated `SafeAreaView` usages with
+      `react-native-safe-area-context` and wrap the app in `SafeAreaProvider`.
