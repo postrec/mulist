@@ -824,3 +824,33 @@
 - Firebase price lookup from the automated web research tool was blocked, so calculator
   rates are explicitly editable estimates and require human verification against the
   active Firebase/Google Cloud region before operational use.
+
+## 2026-06-24 — Vercel Web Deployment
+
+- Created and linked the `mulist/mulist` Vercel project, registered all production
+  Firebase client environment variables, and successfully deployed the Next.js Web
+  Client to production.
+- Added `mulist.sionuu.com` to the Vercel project. The domain remains pending until its
+  third-party DNS provider receives the Vercel-required A record `76.76.21.21`; Firebase
+  Auth must also list the custom domain before sign-in acceptance testing is complete.
+
+## 2026-06-24 — Web Library Bulk Editing
+
+- Added per-Song checkboxes and select-all for the currently filtered Web Library.
+  Selected rows remain visibly highlighted and expose a compact bulk-action bar.
+- Added title-safe bulk metadata editing for artist, BPM, tags, and favorite state.
+  Artist/BPM support set or clear, while tags support replace, add, and remove without
+  disturbing unselected metadata.
+- Firestore bulk writes are committed in bounded 400-Song batches, increment each
+  Song revision, and retain the existing Web device/update timestamp sync contract.
+
+## 2026-06-24 — Admin Functions Production Recovery
+
+- Enabled the Google Cloud APIs required by second-generation Functions and successfully
+  deployed all 12 Firebase Functions in `asia-northeast3`, including the three Admin
+  callables. Added a seven-day Artifact Registry cleanup policy to prevent old function
+  images from accumulating indefinitely.
+- Restored public Cloud Run transport invocation for the Admin callable endpoints while
+  retaining authorization inside each Function. Only the normalized email allowlist
+  entry `sion@sionuu.com` passes `requireAdmin`; every other Firebase account receives
+  `permission-denied`.

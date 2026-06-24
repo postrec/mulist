@@ -14,6 +14,11 @@ const db = (0, firestore_1.getFirestore)();
 const bucket = (0, storage_1.getStorage)().bucket();
 const region = 'asia-northeast3';
 const adminEmails = new Set(['sion@sionuu.com']);
+const adminFunctionOptions = {
+    enforceAppCheck: false,
+    invoker: 'public',
+    region,
+};
 exports.redeemSubscriptionCode = (0, https_1.onCall)({ region, enforceAppCheck: false }, async (request) => {
     const uid = requireUid(request.auth?.uid);
     const normalizedCode = requiredString(request.data?.code, 'code')
@@ -270,7 +275,7 @@ exports.acceptFriendRequest = (0, https_1.onCall)({ region, enforceAppCheck: fal
     await batch.commit();
     return { uid: friendUid };
 });
-exports.adminGetDashboard = (0, https_1.onCall)({ region, enforceAppCheck: false }, async (request) => {
+exports.adminGetDashboard = (0, https_1.onCall)(adminFunctionOptions, async (request) => {
     requireAdmin(request.auth?.token.email);
     const [authUsers, files, songs, setlists, catalog, auditLogs] = await Promise.all([
         (0, auth_1.getAuth)().listUsers(1000),
@@ -308,7 +313,7 @@ exports.adminGetDashboard = (0, https_1.onCall)({ region, enforceAppCheck: false
         })),
     };
 });
-exports.adminSetUserDisabled = (0, https_1.onCall)({ region, enforceAppCheck: false }, async (request) => {
+exports.adminSetUserDisabled = (0, https_1.onCall)(adminFunctionOptions, async (request) => {
     const email = requireAdmin(request.auth?.token.email);
     const uid = requiredString(request.data?.uid, 'uid');
     const disabled = request.data?.disabled;
@@ -318,7 +323,7 @@ exports.adminSetUserDisabled = (0, https_1.onCall)({ region, enforceAppCheck: fa
     await writeAdminAudit(email, 'user.disabled', uid, { disabled });
     return { disabled: user.disabled, uid };
 });
-exports.adminSaveNormalizationCatalog = (0, https_1.onCall)({ region, enforceAppCheck: false }, async (request) => {
+exports.adminSaveNormalizationCatalog = (0, https_1.onCall)(adminFunctionOptions, async (request) => {
     const email = requireAdmin(request.auth?.token.email);
     const tags = catalogItems(request.data?.tags, 'tags');
     const artists = catalogItems(request.data?.artists, 'artists');

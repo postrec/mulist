@@ -11,6 +11,11 @@ const db = getFirestore();
 const bucket = getStorage().bucket();
 const region = 'asia-northeast3';
 const adminEmails = new Set(['sion@sionuu.com']);
+const adminFunctionOptions = {
+  enforceAppCheck: false,
+  invoker: 'public' as const,
+  region,
+};
 
 export const redeemSubscriptionCode = onCall(
   { region, enforceAppCheck: false },
@@ -333,7 +338,7 @@ export const acceptFriendRequest = onCall(
 );
 
 export const adminGetDashboard = onCall(
-  { region, enforceAppCheck: false },
+  adminFunctionOptions,
   async (request) => {
     requireAdmin(request.auth?.token.email);
     const [authUsers, files, songs, setlists, catalog, auditLogs] =
@@ -379,7 +384,7 @@ export const adminGetDashboard = onCall(
 );
 
 export const adminSetUserDisabled = onCall(
-  { region, enforceAppCheck: false },
+  adminFunctionOptions,
   async (request) => {
     const email = requireAdmin(request.auth?.token.email);
     const uid = requiredString(request.data?.uid, 'uid');
@@ -393,7 +398,7 @@ export const adminSetUserDisabled = onCall(
 );
 
 export const adminSaveNormalizationCatalog = onCall(
-  { region, enforceAppCheck: false },
+  adminFunctionOptions,
   async (request) => {
     const email = requireAdmin(request.auth?.token.email);
     const tags = catalogItems(request.data?.tags, 'tags');

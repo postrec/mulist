@@ -22,6 +22,8 @@
 
 - [ ] 프로덕션 Firestore와 Storage의 리전 및 Firebase Blaze 요금제를 확정합니다.
       Callable/Scheduled Functions를 배포하기 전에 예산 한도와 이메일 알림을 설정합니다.
+- [x] `mulist-sionuu` 프로젝트의 Cloud Functions, Cloud Build, Artifact Registry,
+      Cloud Run 및 Compute Engine API를 활성화하고 Functions를 배포했습니다.
 - [ ] 변경된 Firestore Rules, Storage Rules, Functions 및 Web Client를 배포합니다.
       배포 전에는 실시간 카탈로그 조회와 관리자용 Callable Functions를 프로덕션에서
       사용할 수 없습니다.
@@ -37,6 +39,14 @@
 
 ## 웹 관리자 기능 검증
 
+- [x] 이 컴퓨터에서 Vercel CLI에 로그인하고 `mulist` 팀의 `mulist` 프로젝트에
+      `web-client`를 연결하여 프로덕션 배포를 완료했습니다.
+- [ ] hosting.co.kr의 `sionuu.com` DNS 관리 화면에서 호스트 `mulist`에 대한 A 레코드
+      `76.76.21.21`을 추가합니다. 기존에 같은 호스트의 A 또는 CNAME 레코드가 있다면
+      충돌하지 않도록 먼저 확인합니다. DNS 전파 후 Vercel이 인증서와 도메인을 자동으로
+      활성화합니다.
+- [ ] Firebase Authentication의 승인된 도메인에 `mulist.sionuu.com`을 추가하고 해당
+      주소에서 이메일 로그인을 실제로 확인합니다.
 - [ ] 배포된 Web Client에 `sion@sionuu.com`으로 로그인하여 관리자 메뉴가 표시되는지
       확인합니다. 다른 계정이 엔드포인트를 직접 호출하더라도 관리자 Function을 사용할
       수 없는지 확인합니다.

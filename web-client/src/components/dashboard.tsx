@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Trash2,
   Upload,
+  X,
 } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import type { Song } from '@/types/song';
@@ -28,6 +29,7 @@ import { UploadModal } from '@/features/library/upload-modal';
 import { SongModal } from '@/features/library/song-modal';
 import { SetlistsView } from '@/features/setlists/setlists-view';
 import { AdminView } from '@/features/admin/admin-view';
+import { BulkEditModal } from '@/features/library/bulk-edit-modal';
 
 export function Dashboard({
   user,
@@ -42,6 +44,8 @@ export function Dashboard({
     [search, setSearch] = useState(''),
     [upload, setUpload] = useState<false | 'files' | 'drive'>(false),
     [selected, setSelected] = useState<Song | null>(null),
+    [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()),
+    [bulkEdit, setBulkEdit] = useState(false),
     [view, setView] = useState<'library' | 'setlists' | 'admin'>('library'),
     [profile, setProfile] = useState(false);
   useEffect(
@@ -65,6 +69,10 @@ export function Dashboard({
       `${s.title} ${s.artist} ${s.tags.join(' ')}`.toLowerCase().includes(q),
     );
   }, [songs, search]);
+  const selectedSongs = useMemo(
+    () => songs.filter((song) => selectedIds.has(song.id)),
+    [selectedIds, songs],
+  );
   return (
     <div className="min-h-screen bg-canvas">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-white p-5 lg:flex">
@@ -188,12 +196,21 @@ export function Dashboard({
                   Firestore 연결 오류: {error}
                 </p>
               )}
+              {selectedSongs.length > 0 && (
+                <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-3 shadow-soft">
+                  <b className="ml-1 text-sm">{selectedSongs.length}곡 선택</b>
+                  <button onClick={() => setBulkEdit(true)} className="rounded-xl bg-ink px-4 py-2 text-sm font-bold text-white">일괄 변경</button>
+                  <button onClick={() => setSelectedIds(new Set())} className="ml-auto flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-canvas"><X size={15}/> 선택 해제</button>
+                </div>
+              )}
               <Library
                 uid={user.uid}
                 songs={filtered}
                 loading={loading}
                 onUpload={() => setUpload('files')}
                 onSelect={setSelected}
+                selectedIds={selectedIds}
+                onSelectedIdsChange={setSelectedIds}
               />
             </>
           )}
@@ -235,6 +252,17 @@ export function Dashboard({
           onClose={() => setSelected(null)}
         />
       )}
+      {bulkEdit && selectedSongs.length > 0 && (
+        <BulkEditModal
+          uid={user.uid}
+          songs={selectedSongs}
+          onClose={() => setBulkEdit(false)}
+          onSaved={() => {
+            setBulkEdit(false);
+            setSelectedIds(new Set());
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -244,12 +272,16 @@ function Library({
   loading,
   onUpload,
   onSelect,
+  selectedIds,
+  onSelectedIdsChange,
 }: {
   uid: string;
   songs: Song[];
   loading: boolean;
   onUpload: () => void;
   onSelect: (s: Song) => void;
+  selectedIds: Set<string>;
+  onSelectedIdsChange: (ids: Set<string>) => void;
 }) {
   if (loading)
     return (
@@ -279,7 +311,8 @@ function Library({
     );
   return (
     <div className="overflow-hidden rounded-[22px] border border-line bg-white">
-      <div className="hidden grid-cols-[minmax(260px,2fr)_1.2fr_90px_1fr_120px_60px] gap-4 border-b border-line px-5 py-3 text-xs font-bold uppercase tracking-wider text-muted md:grid">
+      <div className="hidden grid-cols-[32px_minmax(260px,2fr)_1.2fr_90px_1fr_120px_60px] gap-4 border-b border-line px-5 py-3 text-xs font-bold uppercase tracking-wider text-muted md:grid">
+        <input type="checkbox" aria-label="현재 목록 전체 선택" checked={songs.length > 0 && songs.every((song)=>selectedIds.has(song.id))} onChange={(event)=>{ const next=new Set(selectedIds); for(const song of songs) event.target.checked?next.add(song.id):next.delete(song.id); onSelectedIdsChange(next); }} className="h-4 w-4 accent-ink" />
         <span>Song</span>
         <span>Artist</span>
         <span>BPM</span>
@@ -291,8 +324,9 @@ function Library({
         <div
           key={song.id}
           onDoubleClick={() => onSelect(song)}
-          className="group grid cursor-pointer grid-cols-[1fr_auto] items-center gap-4 border-b border-line px-4 py-4 last:border-0 hover:bg-canvas/70 md:grid-cols-[minmax(260px,2fr)_1.2fr_90px_1fr_120px_60px] md:px-5"
+          className={`group grid cursor-pointer grid-cols-[28px_1fr_auto] items-center gap-3 border-b border-line px-4 py-4 last:border-0 hover:bg-canvas/70 md:grid-cols-[32px_minmax(260px,2fr)_1.2fr_90px_1fr_120px_60px] md:gap-4 md:px-5 ${selectedIds.has(song.id)?'bg-lime/10':''}`}
         >
+          <input type="checkbox" aria-label={`${song.title} 선택`} checked={selectedIds.has(song.id)} onClick={(event)=>event.stopPropagation()} onChange={(event)=>{ const next=new Set(selectedIds); event.target.checked?next.add(song.id):next.delete(song.id); onSelectedIdsChange(next); }} className="h-4 w-4 accent-ink" />
           <div className="flex min-w-0 items-center gap-4">
             <button
               onClick={() =>

@@ -57,6 +57,11 @@
   - [x] Permanent Cloud Storage and Firestore Cleanup
 - [x] Japanese Library Filters, Empty States, and Refresh Status
 - [x] Language-Aware Canonical Tag Labels
+- [x] Web Client Checkbox Song Selection and Bulk Metadata Editing
+  - [x] Bulk Artist Set and Clear
+  - [x] Bulk BPM Set and Clear
+  - [x] Bulk Tag Replace, Add, and Remove
+  - [x] Bulk Favorite Set and Clear
 
 # Import
 
@@ -183,11 +188,20 @@
 ## Web Admin
 
 - [x] Server-Enforced Admin Email Allowlist
+- [x] Production Admin Callable Functions Deployment
+- [x] Public Callable Transport with `sion@sionuu.com` Server Authorization
 - [x] User Listing and Enable/Disable Management
 - [x] Tag and Artist Normalization Catalog Editor
 - [x] Firebase Storage and Firestore Usage Overview
 - [x] Editable Growth Cost Estimate Calculator
 - [x] Admin Audit Log
+
+## Web Deployment
+
+- [x] Deploy Next.js Web Client to Vercel
+- [x] Configure Vercel Production Environment Variables
+- [ ] Connect and Verify `mulist.sionuu.com`
+- [ ] Add `mulist.sionuu.com` to Firebase Auth Authorized Domains
 
 ## Firebase Setup
 

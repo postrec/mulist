@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, Timestamp, updateDoc, type Unsubscribe } from 'firebase/firestore';
+import { collection, doc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, Timestamp, updateDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import type { Song } from '@/types/song';
@@ -43,5 +43,18 @@ export async function createSongFromPdf(uid:string,file:File,onProgress:(v:numbe
   await runTransaction(db, async tx=>tx.set(songRef,cloud)); onProgress(1); return songId;
 }
 export async function updateSong(uid:string,song:Song,patch:Partial<Pick<Song,'title'|'artist'|'bpm'|'tags'|'favorite'>>) { await updateDoc(doc(db,'users',uid,'songs',song.id),{...patch,revision:song.revision+1,updatedAt:serverTimestamp(),deviceId:'web'}); }
+export type BulkSongPatch = Partial<Pick<Song,'artist'|'bpm'|'tags'|'favorite'>>;
+export async function updateSongs(uid:string,songs:Song[],patchFor:(song:Song)=>BulkSongPatch) {
+  const chunkSize = 400;
+  for (let offset = 0; offset < songs.length; offset += chunkSize) {
+    const batch = writeBatch(db);
+    for (const song of songs.slice(offset, offset + chunkSize)) {
+      batch.update(doc(db,'users',uid,'songs',song.id),{
+        ...patchFor(song), revision:song.revision+1, updatedAt:serverTimestamp(), deviceId:'web',
+      });
+    }
+    await batch.commit();
+  }
+}
 export async function deleteSong(uid:string,song:Song) { await updateDoc(doc(db,'users',uid,'songs',song.id),{deletedAt:serverTimestamp(),revision:song.revision+1,updatedAt:serverTimestamp(),deviceId:'web'}); }
 export async function openScore(uid:string,song:Song) { if (!song.scoreIds[0]) throw new Error('연결된 PDF가 없습니다.'); window.open(await getDownloadURL(ref(storage,`users/${uid}/songs/${song.id}/${song.scoreIds[0]}.pdf`)),'_blank','noopener,noreferrer'); }
