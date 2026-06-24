@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanupExpiredShares = exports.acceptFriendRequest = exports.sendFriendRequest = exports.inviteSetlistUser = exports.acceptTeamInvite = exports.createTeamInvite = exports.importSharedSong = exports.createThreeDayShare = exports.redeemSubscriptionCode = void 0;
+exports.cleanupExpiredShares = exports.adminSaveNormalizationCatalog = exports.adminSetUserDisabled = exports.adminGetDashboard = exports.acceptFriendRequest = exports.sendFriendRequest = exports.inviteSetlistUser = exports.acceptTeamInvite = exports.createTeamInvite = exports.importSharedSong = exports.createThreeDayShare = exports.redeemSubscriptionCode = void 0;
 const node_crypto_1 = require("node:crypto");
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
@@ -13,6 +13,7 @@ if (!(0, app_1.getApps)().length)
 const db = (0, firestore_1.getFirestore)();
 const bucket = (0, storage_1.getStorage)().bucket();
 const region = 'asia-northeast3';
+const adminEmails = new Set(['sion@sionuu.com']);
 exports.redeemSubscriptionCode = (0, https_1.onCall)({ region, enforceAppCheck: false }, async (request) => {
     const uid = requireUid(request.auth?.uid);
     const normalizedCode = requiredString(request.data?.code, 'code')
@@ -269,6 +270,70 @@ exports.acceptFriendRequest = (0, https_1.onCall)({ region, enforceAppCheck: fal
     await batch.commit();
     return { uid: friendUid };
 });
+exports.adminGetDashboard = (0, https_1.onCall)({ region, enforceAppCheck: false }, async (request) => {
+    requireAdmin(request.auth?.token.email);
+    const [authUsers, files, songs, setlists, catalog, auditLogs] = await Promise.all([
+        (0, auth_1.getAuth)().listUsers(1000),
+        bucket.getFiles(),
+        db.collectionGroup('songs').count().get(),
+        db.collectionGroup('setlists').count().get(),
+        db.doc('catalog/normalization').get(),
+        db
+            .collection('adminAuditLogs')
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get(),
+    ]);
+    const storageBytes = files[0].reduce((total, file) => total + Number(file.metadata.size ?? 0), 0);
+    return {
+        catalog: catalog.data() ?? { artists: [], tags: [] },
+        auditLogs: auditLogs.docs.map((item) => ({
+            id: item.id,
+            ...item.data(),
+        })),
+        metrics: {
+            firestoreSongs: songs.data().count,
+            firestoreSetlists: setlists.data().count,
+            storageBytes,
+            storageFiles: files[0].length,
+            users: authUsers.users.length,
+        },
+        users: authUsers.users.map((user) => ({
+            createdAt: user.metadata.creationTime,
+            disabled: user.disabled,
+            displayName: user.displayName ?? null,
+            email: user.email ?? null,
+            lastSignInAt: user.metadata.lastSignInTime,
+            uid: user.uid,
+        })),
+    };
+});
+exports.adminSetUserDisabled = (0, https_1.onCall)({ region, enforceAppCheck: false }, async (request) => {
+    const email = requireAdmin(request.auth?.token.email);
+    const uid = requiredString(request.data?.uid, 'uid');
+    const disabled = request.data?.disabled;
+    if (typeof disabled !== 'boolean')
+        throw new https_1.HttpsError('invalid-argument', 'disabled must be boolean.');
+    const user = await (0, auth_1.getAuth)().updateUser(uid, { disabled });
+    await writeAdminAudit(email, 'user.disabled', uid, { disabled });
+    return { disabled: user.disabled, uid };
+});
+exports.adminSaveNormalizationCatalog = (0, https_1.onCall)({ region, enforceAppCheck: false }, async (request) => {
+    const email = requireAdmin(request.auth?.token.email);
+    const tags = catalogItems(request.data?.tags, 'tags');
+    const artists = catalogItems(request.data?.artists, 'artists');
+    await db.doc('catalog/normalization').set({
+        artists,
+        tags,
+        updatedAt: firestore_1.Timestamp.now(),
+        updatedBy: email,
+    });
+    await writeAdminAudit(email, 'catalog.saved', 'catalog/normalization', {
+        artists: artists.length,
+        tags: tags.length,
+    });
+    return { artists: artists.length, tags: tags.length };
+});
 exports.cleanupExpiredShares = (0, scheduler_1.onSchedule)({ region, schedule: 'every 24 hours' }, async () => {
     const expired = await db
         .collection('shares')
@@ -283,6 +348,33 @@ function requireUid(uid) {
     if (!uid)
         throw new https_1.HttpsError('unauthenticated', 'Sign in required.');
     return uid;
+}
+function requireAdmin(email) {
+    const normalized = typeof email === 'string' ? email.toLowerCase() : '';
+    if (!adminEmails.has(normalized))
+        throw new https_1.HttpsError('permission-denied', 'Admin access required.');
+    return normalized;
+}
+function catalogItems(value, name) {
+    if (!Array.isArray(value) || value.length > 500)
+        throw new https_1.HttpsError('invalid-argument', `${name} must be an array.`);
+    return value.map((item, index) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item))
+            throw new https_1.HttpsError('invalid-argument', `${name}[${index}] is invalid.`);
+        const record = item;
+        if (typeof record.id !== 'string' || !record.id.trim())
+            throw new https_1.HttpsError('invalid-argument', `${name}[${index}].id is required.`);
+        return record;
+    });
+}
+async function writeAdminAudit(email, action, target, details) {
+    await db.collection('adminAuditLogs').add({
+        action,
+        actorEmail: email,
+        createdAt: firestore_1.Timestamp.now(),
+        details,
+        target,
+    });
 }
 function requiredString(value, name) {
     if (typeof value !== 'string' || !value.trim())

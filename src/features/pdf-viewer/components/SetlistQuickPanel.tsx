@@ -36,19 +36,12 @@ export function SetlistQuickPanel({
               <Text style={[styles.order, selected && styles.selectedText]}>
                 {index + 1}
               </Text>
-              <View style={styles.songText}>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.songTitle, selected && styles.selectedText]}
-                >
-                  {song.title}
-                </Text>
-                {song.artist ? (
-                  <Text numberOfLines={1} style={styles.artist}>
-                    {song.artist}
-                  </Text>
-                ) : null}
-              </View>
+              <Text
+                numberOfLines={1}
+                style={[styles.songTitle, selected && styles.selectedText]}
+              >
+                {song.title}
+              </Text>
             </Pressable>
           );
         })}
@@ -59,7 +52,7 @@ export function SetlistQuickPanel({
 
 const styles = StyleSheet.create({
   panel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: 'rgba(255, 255, 255, 0.86)',
     borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
@@ -89,8 +82,6 @@ const styles = StyleSheet.create({
   },
   selectedRow: { backgroundColor: colors.primary },
   order: { color: colors.muted, fontSize: 11, fontWeight: '800', width: 23 },
-  songText: { flex: 1 },
-  songTitle: { color: colors.text, fontSize: 13, fontWeight: '700' },
-  artist: { color: colors.muted, fontSize: 10, marginTop: 1 },
+  songTitle: { color: colors.text, flex: 1, fontSize: 13, fontWeight: '700' },
   selectedText: { color: '#FFFFFF' },
 });

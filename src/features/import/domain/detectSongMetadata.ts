@@ -1,3 +1,5 @@
+import { detectCatalogArtistPrefix } from '../../normalization/normalizationCatalog';
+
 export interface DetectedSongMetadata {
   artist: string;
   title: string;
@@ -10,6 +12,9 @@ export function detectSongMetadata(fileName: string): DetectedSongMetadata {
     .replace(/\s+/g, ' ')
     .trim();
   const separatorIndex = baseName.indexOf(' - ');
+
+  const catalogMatch = detectCatalogArtistPrefix(baseName);
+  if (catalogMatch) return catalogMatch;
 
   if (separatorIndex > 0 && separatorIndex < baseName.length - 3) {
     return {

@@ -10,6 +10,7 @@ if (!getApps().length) initializeApp();
 const db = getFirestore();
 const bucket = getStorage().bucket();
 const region = 'asia-northeast3';
+const adminEmails = new Set(['sion@sionuu.com']);
 
 export const redeemSubscriptionCode = onCall(
   { region, enforceAppCheck: false },
@@ -331,6 +332,86 @@ export const acceptFriendRequest = onCall(
   },
 );
 
+export const adminGetDashboard = onCall(
+  { region, enforceAppCheck: false },
+  async (request) => {
+    requireAdmin(request.auth?.token.email);
+    const [authUsers, files, songs, setlists, catalog, auditLogs] =
+      await Promise.all([
+        getAuth().listUsers(1000),
+        bucket.getFiles(),
+        db.collectionGroup('songs').count().get(),
+        db.collectionGroup('setlists').count().get(),
+        db.doc('catalog/normalization').get(),
+        db
+          .collection('adminAuditLogs')
+          .orderBy('createdAt', 'desc')
+          .limit(50)
+          .get(),
+      ]);
+    const storageBytes = files[0].reduce(
+      (total, file) => total + Number(file.metadata.size ?? 0),
+      0,
+    );
+    return {
+      catalog: catalog.data() ?? { artists: [], tags: [] },
+      auditLogs: auditLogs.docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      })),
+      metrics: {
+        firestoreSongs: songs.data().count,
+        firestoreSetlists: setlists.data().count,
+        storageBytes,
+        storageFiles: files[0].length,
+        users: authUsers.users.length,
+      },
+      users: authUsers.users.map((user) => ({
+        createdAt: user.metadata.creationTime,
+        disabled: user.disabled,
+        displayName: user.displayName ?? null,
+        email: user.email ?? null,
+        lastSignInAt: user.metadata.lastSignInTime,
+        uid: user.uid,
+      })),
+    };
+  },
+);
+
+export const adminSetUserDisabled = onCall(
+  { region, enforceAppCheck: false },
+  async (request) => {
+    const email = requireAdmin(request.auth?.token.email);
+    const uid = requiredString(request.data?.uid, 'uid');
+    const disabled = request.data?.disabled;
+    if (typeof disabled !== 'boolean')
+      throw new HttpsError('invalid-argument', 'disabled must be boolean.');
+    const user = await getAuth().updateUser(uid, { disabled });
+    await writeAdminAudit(email, 'user.disabled', uid, { disabled });
+    return { disabled: user.disabled, uid };
+  },
+);
+
+export const adminSaveNormalizationCatalog = onCall(
+  { region, enforceAppCheck: false },
+  async (request) => {
+    const email = requireAdmin(request.auth?.token.email);
+    const tags = catalogItems(request.data?.tags, 'tags');
+    const artists = catalogItems(request.data?.artists, 'artists');
+    await db.doc('catalog/normalization').set({
+      artists,
+      tags,
+      updatedAt: Timestamp.now(),
+      updatedBy: email,
+    });
+    await writeAdminAudit(email, 'catalog.saved', 'catalog/normalization', {
+      artists: artists.length,
+      tags: tags.length,
+    });
+    return { artists: artists.length, tags: tags.length };
+  },
+);
+
 export const cleanupExpiredShares = onSchedule(
   { region, schedule: 'every 24 hours' },
   async () => {
@@ -348,6 +429,41 @@ export const cleanupExpiredShares = onSchedule(
 function requireUid(uid: string | undefined): string {
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
   return uid;
+}
+function requireAdmin(email: unknown): string {
+  const normalized = typeof email === 'string' ? email.toLowerCase() : '';
+  if (!adminEmails.has(normalized))
+    throw new HttpsError('permission-denied', 'Admin access required.');
+  return normalized;
+}
+function catalogItems(value: unknown, name: string): Record<string, unknown>[] {
+  if (!Array.isArray(value) || value.length > 500)
+    throw new HttpsError('invalid-argument', `${name} must be an array.`);
+  return value.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item))
+      throw new HttpsError('invalid-argument', `${name}[${index}] is invalid.`);
+    const record = item as Record<string, unknown>;
+    if (typeof record.id !== 'string' || !record.id.trim())
+      throw new HttpsError(
+        'invalid-argument',
+        `${name}[${index}].id is required.`,
+      );
+    return record;
+  });
+}
+async function writeAdminAudit(
+  email: string,
+  action: string,
+  target: string,
+  details: Record<string, unknown>,
+): Promise<void> {
+  await db.collection('adminAuditLogs').add({
+    action,
+    actorEmail: email,
+    createdAt: Timestamp.now(),
+    details,
+    target,
+  });
 }
 function requiredString(value: unknown, name: string): string {
   if (typeof value !== 'string' || !value.trim())

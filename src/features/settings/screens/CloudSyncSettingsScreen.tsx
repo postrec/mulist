@@ -66,8 +66,8 @@ export function CloudSyncSettingsScreen() {
           value={settings.cloudSyncEnabled}
         />
         <SwitchRow
-          description="대용량 PDF 업로드는 Wi-Fi 연결에서만 실행합니다."
-          label="Wi-Fi에서만 동기화"
+          description={t('settings.cloudWifiOnlyDescription')}
+          label={t('settings.cloudWifiOnly')}
           onChange={(wifiOnlySync) => void update({ wifiOnlySync })}
           value={settings.wifiOnlySync}
         />
@@ -77,16 +77,16 @@ export function CloudSyncSettingsScreen() {
           style={[styles.syncButton, syncing && styles.disabled]}
         >
           <Text style={styles.syncButtonLabel}>
-            {syncing ? '모든 곡 동기화 중…' : '지금 모든 곡 데이터 동기화'}
+            {syncing
+              ? t('settings.cloudForceSyncing')
+              : t('settings.cloudForceSync')}
           </Text>
         </Pressable>
-        <Text style={styles.note}>
-          로그인 상태에서 앱 시작·복귀·네트워크 재연결 시 자동으로 동기화됩니다.
-        </Text>
+        <Text style={styles.note}>{t('settings.cloudAutoDescription')}</Text>
       </ScrollView>
       {logs.length > 0 ? (
         <View style={styles.logPanel}>
-          <Text style={styles.logTitle}>동기화 로그</Text>
+          <Text style={styles.logTitle}>{t('settings.cloudLogs')}</Text>
           {logs.map((log, index) => (
             <Text
               key={`${index}-${log}`}

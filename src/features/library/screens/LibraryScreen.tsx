@@ -14,6 +14,8 @@ import { useState } from 'react';
 
 import type { Song } from '../../../domain/models';
 import { FilterChip } from '../../../shared/components/FilterChip';
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
 import { getTagLabel } from '../../../domain/tagPresets';
 import { LibraryEmptyState } from '../components/LibraryEmptyState';
@@ -59,14 +61,6 @@ interface LibraryScreenProps {
 }
 
 const doNothing = () => undefined;
-const filters: readonly { label: string; value: LibraryView }[] = [
-  { label: '전체', value: 'all' },
-  { label: '최근', value: 'recent' },
-  { label: '즐겨찾기', value: 'favorites' },
-  { label: '태그', value: 'tags' },
-  { label: '휴지통', value: 'trash' },
-];
-
 export function LibraryScreen({
   error,
   isImporting,
@@ -96,6 +90,14 @@ export function LibraryScreen({
   onViewSelect,
   onSongPress = doNothing,
 }: LibraryScreenProps) {
+  useAppLanguage();
+  const filters: readonly { label: string; value: LibraryView }[] = [
+    { label: t('library.all'), value: 'all' },
+    { label: t('library.recent'), value: 'recent' },
+    { label: t('library.favorites'), value: 'favorites' },
+    { label: t('library.tags'), value: 'tags' },
+    { label: t('library.trash'), value: 'trash' },
+  ];
   const { width } = useWindowDimensions();
   const columnCount = width >= 560 ? 2 : 1;
   const [actionSong, setActionSong] = useState<Song | null>(null);
@@ -272,7 +274,7 @@ export function LibraryScreen({
         />
         {editingSong ? (
           <ScoreSettingsModal
-            heading="곡 정보 수정"
+            heading={t('library.editSong')}
             onClose={() => setEditingSong(null)}
             onSave={(metadata) => onMetadataSave(editingSong, metadata)}
             song={editingSong}
@@ -297,23 +299,23 @@ function getEmptyState(view: LibraryView, onImportPress: () => void) {
   switch (view) {
     case 'recent':
       return {
-        title: '최근 사용한 곡이 없습니다',
-        description: '곡을 열면 여기에 표시됩니다.',
+        title: t('library.emptyRecentTitle'),
+        description: t('library.emptyRecentDescription'),
       };
     case 'favorites':
       return {
-        title: '즐겨찾기가 없습니다',
-        description: '자주 쓰는 곡에 별표를 추가해 보세요.',
+        title: t('library.emptyFavoritesTitle'),
+        description: t('library.emptyFavoritesDescription'),
       };
     case 'tags':
       return {
-        title: '선택한 태그의 곡이 없습니다',
-        description: '곡에 태그를 추가하거나 다른 태그를 선택하세요.',
+        title: t('library.emptyTagsTitle'),
+        description: t('library.emptyTagsDescription'),
       };
     case 'trash':
       return {
-        title: '휴지통이 비어 있습니다',
-        description: '삭제한 곡은 30일 동안 보관됩니다.',
+        title: t('library.emptyTrashTitle'),
+        description: t('library.emptyTrashDescription'),
       };
     case 'all':
       return { onActionPress: onImportPress };

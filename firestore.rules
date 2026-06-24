@@ -18,6 +18,10 @@ service cloud.firestore {
       allow read, create, update, delete: if owns(uid);
       match /{document=**} { allow read, write: if owns(uid); }
     }
+    match /catalog/{document=**} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
     match /shares/{shareId} {
       allow read: if signedIn() && resource.data.expiresAt > request.time;
       allow write: if false;

@@ -5,6 +5,7 @@ import type { Song } from '../../../domain/models';
 import { firebaseAuth } from '../../../config/firebase';
 import { getRepositories } from '../../../storage';
 import { reportError } from '../../../shared/logging/reportError';
+import { t } from '../../../shared/i18n';
 import { deleteSongPackage } from '../../../storage/songPackageFiles';
 import {
   importScoreImages,
@@ -119,7 +120,7 @@ export function useLibrary() {
         notice:
           downloaded > 0
             ? `웹에서 변경된 곡 ${downloaded}개를 받았습니다.`
-            : '라이브러리가 최신 상태입니다.',
+            : t('library.latest'),
       }));
     } catch (error: unknown) {
       reportError('라이브러리 수동 새로고침 실패', error);

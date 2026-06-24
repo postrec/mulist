@@ -262,7 +262,7 @@ export function ShowDrawingToolbarButton({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       style={styles.showDrawingButton}
     >
-      <FontAwesome5 color={colors.text} name="pen" size={14} />
+      <FontAwesome5 color={colors.text} name="pen" size={18} />
     </Pressable>
   );
 }
@@ -405,16 +405,16 @@ const styles = StyleSheet.create({
   },
   showDrawingButton: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.86)',
     borderColor: colors.border,
     borderRadius: 9,
     borderWidth: 1,
     bottom: 20,
-    height: 30,
+    height: 38,
     justifyContent: 'center',
     position: 'absolute',
     right: 16,
-    width: 30,
+    width: 38,
     zIndex: 20,
   },
   showMenu: {

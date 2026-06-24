@@ -362,7 +362,7 @@ async function renderPdfModel(model,generation,quality='full'){
   }
 }
 async function renderRemainingPreviews(generation,anchor){
-  const priority=new Set(renderNumbers([anchor-1,anchor,anchor+1,anchor+2]));
+  const priority=new Set(renderNumbers(usesTwoPageSpread()?[anchor-2,anchor-1,anchor,anchor+1,anchor+2,anchor+3]:[anchor-1,anchor,anchor+1,anchor+2]));
   const remaining=models.filter(model=>!priority.has(model.number)).sort((left,right)=>Math.abs(left.number-anchor)-Math.abs(right.number-anchor));
   for(const model of remaining){
     if(generation!==renderGeneration||anchor!==currentPage)return;
@@ -372,7 +372,8 @@ async function renderRemainingPreviews(generation,anchor){
 }
 async function renderBackgroundPages(generation,anchor){
   if(generation!==renderGeneration||preloadOnly||anchor!==currentPage)return;
-  for(const number of renderNumbers([anchor-1,anchor+2])){
+  const background=usesTwoPageSpread()?[anchor-2,anchor-1,anchor+2,anchor+3]:[anchor-1,anchor+2];
+  for(const number of renderNumbers(background)){
     if(generation!==renderGeneration||anchor!==currentPage)return;
     await renderPdfModel(models[number-1],generation);
   }

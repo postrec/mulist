@@ -50,10 +50,15 @@
 26. Update PROGRESS.md after major milestones.
 27. Create TODO items for unresolved issues.
 28. Never silently skip tasks.
+29. Record every task that requires human authority, credentials, payment, legal review,
+    subjective feedback, production-console work, or physical-device verification in
+    TODO_Human.md.
+30. When implementation creates a new human verification dependency, update
+    TODO_Human.md in the same task turn.
 
 ## Product Philosophy
 
-29. Users manage Songs, not PDFs.
-30. Every decision should improve live performance workflow.
-31. Optimize for church musicians and performers.
-32. Avoid features that increase complexity without improving performance workflow.
+31. Users manage Songs, not PDFs.
+32. Every decision should improve live performance workflow.
+33. Optimize for church musicians and performers.
+34. Avoid features that increase complexity without improving performance workflow.

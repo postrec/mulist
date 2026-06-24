@@ -38,7 +38,7 @@ function getRouteLabel(route: SettingsRoute): string {
   if (route === 'display') return t('settings.displaySettings');
   if (route === 'feedback') return t('settings.feedback');
   if (route === 'language') return t('settings.language');
-  if (route === 'logs') return '모든 로그';
+  if (route === 'logs') return t('settings.allLogs');
   if (route === 'subscription') return t('settings.subscription');
   if (route === 'sync') return t('settings.cloudSync');
   return t('settings.versionInfo');
@@ -118,7 +118,10 @@ function SettingsHome({
           label={t('settings.feedback')}
           onPress={() => onSelect('feedback')}
         />
-        <SettingsRow label="모든 로그 보기" onPress={() => onSelect('logs')} />
+        <SettingsRow
+          label={t('settings.allLogsView')}
+          onPress={() => onSelect('logs')}
+        />
         <SettingsRow
           label={t('settings.versionInfo')}
           onPress={() => onSelect('version')}

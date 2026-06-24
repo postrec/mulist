@@ -17,6 +17,7 @@ import {
   syncOnAppState,
 } from './src/features/cloud/services/syncWorker';
 import { importSharedSong } from './src/features/cloud/services/sharingService';
+import { startNormalizationCatalogSync } from './src/features/normalization/normalizationCatalog';
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ function AppContent() {
     setlist: Setlist;
     songs: readonly Song[];
   } | null>(null);
+  const [, setCatalogVersion] = useState(0);
 
   const openLibrarySong = (song: Song) => {
     setViewerSetlist(null);
@@ -57,6 +59,14 @@ function AppContent() {
       subscription.remove();
     };
   }, [refreshLibrary]);
+
+  useEffect(
+    () =>
+      startNormalizationCatalogSync(() =>
+        setCatalogVersion((version) => version + 1),
+      ),
+    [],
+  );
 
   useEffect(() => {
     const openShare = (url: string | null) => {

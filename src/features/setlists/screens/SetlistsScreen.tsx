@@ -1,6 +1,8 @@
 import {
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -116,7 +118,11 @@ export function SetlistsScreen({
         </Pressable>
       </View>
       {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
-      <View style={styles.columns}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={SCREEN_HEADER_HEIGHT}
+        style={styles.columns}
+      >
         <View style={styles.sidebar}>
           <FlatList
             data={state.setlists}
@@ -140,6 +146,8 @@ export function SetlistsScreen({
         </View>
         <ScrollView
           contentContainerStyle={styles.detailContent}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
           style={styles.detail}
         >
           {state.selected ? (
@@ -233,7 +241,7 @@ export function SetlistsScreen({
             />
           ) : null}
         </View>
-      </View>
+      </KeyboardAvoidingView>
       {state.selected ? (
         <SetlistMembersModal
           onClose={() => setMembersOpen(false)}

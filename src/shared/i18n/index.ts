@@ -81,10 +81,54 @@ type TranslationKey =
   | 'language.korean'
   | 'language.title'
   | 'library.importPdf'
+  | 'library.all'
+  | 'library.emptyFavoritesDescription'
+  | 'library.emptyFavoritesTitle'
+  | 'library.emptyFirstDescription'
+  | 'library.emptyFirstTitle'
+  | 'library.emptyRecentDescription'
+  | 'library.emptyRecentTitle'
+  | 'library.emptyTagsDescription'
+  | 'library.emptyTagsTitle'
+  | 'library.emptyTrashDescription'
+  | 'library.emptyTrashTitle'
+  | 'library.editSong'
+  | 'library.favorites'
+  | 'library.friend'
+  | 'library.latest'
+  | 'library.recent'
   | 'library.search'
   | 'library.setlists'
   | 'library.settings'
   | 'library.title'
+  | 'library.tags'
+  | 'library.trash'
+  | 'logs.clear'
+  | 'logs.empty'
+  | 'logs.loading'
+  | 'logs.recent'
+  | 'logs.refresh'
+  | 'profile.bio'
+  | 'profile.bioPlaceholder'
+  | 'profile.cloudSaved'
+  | 'profile.color'
+  | 'profile.localSaved'
+  | 'profile.name'
+  | 'profile.namePlaceholder'
+  | 'profile.part'
+  | 'profile.save'
+  | 'profile.saving'
+  | 'profile.title'
+  | 'score.artist'
+  | 'score.bpmUnset'
+  | 'score.cancel'
+  | 'score.save'
+  | 'score.saving'
+  | 'score.settings'
+  | 'score.tags'
+  | 'score.title'
+  | 'score.titleRequired'
+  | 'score.bpmInvalid'
   | 'search.all'
   | 'search.artist'
   | 'search.emptyQuery'
@@ -110,8 +154,16 @@ type TranslationKey =
   | 'settings.account'
   | 'settings.accountSubtitle'
   | 'settings.appSettings'
+  | 'settings.allLogs'
+  | 'settings.allLogsView'
   | 'settings.autoCropMargin'
   | 'settings.cloudSync'
+  | 'settings.cloudAutoDescription'
+  | 'settings.cloudForceSync'
+  | 'settings.cloudForceSyncing'
+  | 'settings.cloudLogs'
+  | 'settings.cloudWifiOnly'
+  | 'settings.cloudWifiOnlyDescription'
   | 'settings.developerMode'
   | 'settings.displaySettings'
   | 'settings.displaySubtitle'
@@ -274,11 +326,58 @@ const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
     'language.japanese': '일본어',
     'language.korean': '한국어',
     'language.title': '언어',
+    'library.all': '전체',
+    'library.emptyFavoritesDescription': '자주 쓰는 곡에 별표를 추가해 보세요.',
+    'library.emptyFavoritesTitle': '즐겨찾기가 없습니다',
+    'library.emptyFirstDescription':
+      'PDF 악보를 가져오면 곡 중심으로 정리할 수 있어요.',
+    'library.emptyFirstTitle': '첫 곡을 추가해 보세요',
+    'library.emptyRecentDescription': '곡을 열면 여기에 표시됩니다.',
+    'library.emptyRecentTitle': '최근 사용한 곡이 없습니다',
+    'library.emptyTagsDescription':
+      '곡에 태그를 추가하거나 다른 태그를 선택하세요.',
+    'library.emptyTagsTitle': '선택한 태그의 곡이 없습니다',
+    'library.emptyTrashDescription': '삭제한 곡은 30일 동안 보관됩니다.',
+    'library.emptyTrashTitle': '휴지통이 비어 있습니다',
+    'library.editSong': '곡 정보 수정',
+    'library.favorites': '즐겨찾기',
+    'library.friend': '친구',
     'library.importPdf': '＋ PDF 가져오기',
+    'library.latest': '라이브러리가 최신 상태입니다.',
+    'library.recent': '최근',
     'library.search': '검색',
     'library.setlists': '셋리스트',
     'library.settings': '설정',
     'library.title': '라이브러리',
+    'library.tags': '태그',
+    'library.trash': '휴지통',
+    'logs.clear': '모두 지우기',
+    'logs.empty': '저장된 로그가 없습니다.',
+    'logs.loading': '불러오는 중…',
+    'logs.recent': '최근 로그',
+    'logs.refresh': '새로고침',
+    'profile.bio': '자기소개',
+    'profile.bioPlaceholder': '연주 활동이나 관심사를 간단히 소개해 주세요.',
+    'profile.cloudSaved': '프로필을 저장했습니다.',
+    'profile.color': '프로필 색상',
+    'profile.localSaved':
+      '기기에 저장했습니다. Cloud 연결 시 다시 동기화해 주세요.',
+    'profile.name': '이름',
+    'profile.namePlaceholder': '표시할 이름',
+    'profile.part': '주 파트',
+    'profile.save': '프로필 저장',
+    'profile.saving': '저장 중…',
+    'profile.title': '프로필',
+    'score.artist': '가수',
+    'score.bpmInvalid': 'BPM은 30~300 사이로 입력해주세요.',
+    'score.bpmUnset': '미설정',
+    'score.cancel': '취소',
+    'score.save': '저장',
+    'score.saving': '저장 중…',
+    'score.settings': '악보 설정',
+    'score.tags': '태그',
+    'score.title': '제목',
+    'score.titleRequired': '제목을 입력해주세요.',
     'search.all': '전체',
     'search.artist': '아티스트',
     'search.emptyQuery': '검색어를 입력하세요.',
@@ -304,8 +403,18 @@ const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
     'settings.account': '계정',
     'settings.accountSubtitle': '로그인과 계정 관리',
     'settings.appSettings': '앱 설정',
+    'settings.allLogs': '모든 로그',
+    'settings.allLogsView': '모든 로그 보기',
     'settings.autoCropMargin': 'Auto Crop Margin',
     'settings.cloudSync': '클라우드 동기화',
+    'settings.cloudAutoDescription':
+      '로그인 상태에서 앱 시작·복귀·네트워크 재연결 시 자동으로 동기화됩니다.',
+    'settings.cloudForceSync': '지금 모든 곡 데이터 동기화',
+    'settings.cloudForceSyncing': '모든 곡 동기화 중…',
+    'settings.cloudLogs': '동기화 로그',
+    'settings.cloudWifiOnly': 'Wi-Fi에서만 동기화',
+    'settings.cloudWifiOnlyDescription':
+      '대용량 PDF 업로드는 Wi-Fi 연결에서만 실행합니다.',
     'settings.developerMode': 'Developer Mode',
     'settings.displaySettings': '화면 설정',
     'settings.displaySubtitle': '테마, 글자 크기, PDF 보기',
@@ -471,11 +580,59 @@ const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
     'language.japanese': 'Japanese',
     'language.korean': 'Korean',
     'language.title': 'Language',
+    'library.all': 'All',
+    'library.emptyFavoritesDescription': 'Star songs you use often.',
+    'library.emptyFavoritesTitle': 'No favorites yet',
+    'library.emptyFirstDescription':
+      'Import PDF scores to organize them by song.',
+    'library.emptyFirstTitle': 'Add your first song',
+    'library.emptyRecentDescription': 'Songs appear here after you open them.',
+    'library.emptyRecentTitle': 'No recently opened songs',
+    'library.emptyTagsDescription':
+      'Add a tag to a song or select another tag.',
+    'library.emptyTagsTitle': 'No songs with this tag',
+    'library.emptyTrashDescription': 'Deleted songs are retained for 30 days.',
+    'library.emptyTrashTitle': 'Trash is empty',
+    'library.editSong': 'Edit song information',
+    'library.favorites': 'Favorites',
+    'library.friend': 'Friends',
     'library.importPdf': '＋ Import PDF',
+    'library.latest': 'Library is up to date.',
+    'library.recent': 'Recent',
     'library.search': 'Search',
     'library.setlists': 'Setlists',
     'library.settings': 'Settings',
     'library.title': 'Library',
+    'library.tags': 'Tags',
+    'library.trash': 'Trash',
+    'logs.clear': 'Clear all',
+    'logs.empty': 'No saved logs.',
+    'logs.loading': 'Loading…',
+    'logs.recent': 'Recent logs',
+    'logs.refresh': 'Refresh',
+    'profile.bio': 'Bio',
+    'profile.bioPlaceholder':
+      'Briefly describe your musical work or interests.',
+    'profile.cloudSaved': 'Profile saved.',
+    'profile.color': 'Profile color',
+    'profile.localSaved':
+      'Saved on this device. It will sync when Cloud is available.',
+    'profile.name': 'Name',
+    'profile.namePlaceholder': 'Display name',
+    'profile.part': 'Primary role',
+    'profile.save': 'Save profile',
+    'profile.saving': 'Saving…',
+    'profile.title': 'Profile',
+    'score.artist': 'Artist',
+    'score.bpmInvalid': 'BPM must be between 30 and 300.',
+    'score.bpmUnset': 'Not set',
+    'score.cancel': 'Cancel',
+    'score.save': 'Save',
+    'score.saving': 'Saving…',
+    'score.settings': 'Score settings',
+    'score.tags': 'Tags',
+    'score.title': 'Title',
+    'score.titleRequired': 'Enter a title.',
     'search.all': 'All',
     'search.artist': 'Artist',
     'search.emptyQuery': 'Enter a search term.',
@@ -501,8 +658,18 @@ const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
     'settings.account': 'Account',
     'settings.accountSubtitle': 'Sign-in and account management',
     'settings.appSettings': 'App Settings',
+    'settings.allLogs': 'All logs',
+    'settings.allLogsView': 'View all logs',
     'settings.autoCropMargin': 'Auto Crop Margin',
     'settings.cloudSync': 'Cloud Sync',
+    'settings.cloudAutoDescription':
+      'Syncs automatically at app launch, resume, and network reconnection while signed in.',
+    'settings.cloudForceSync': 'Sync all song data now',
+    'settings.cloudForceSyncing': 'Syncing all songs…',
+    'settings.cloudLogs': 'Sync log',
+    'settings.cloudWifiOnly': 'Sync on Wi-Fi only',
+    'settings.cloudWifiOnlyDescription':
+      'Large PDF uploads run only over Wi-Fi.',
     'settings.developerMode': 'Developer Mode',
     'settings.displaySettings': 'Display',
     'settings.displaySubtitle': 'Theme, font size, and PDF viewing',
@@ -663,11 +830,57 @@ const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
     'language.japanese': '日本語',
     'language.korean': '韓国語',
     'language.title': '言語',
+    'library.all': 'すべて',
+    'library.emptyFavoritesDescription': 'よく使う曲に星を付けてください。',
+    'library.emptyFavoritesTitle': 'お気に入りはありません',
+    'library.emptyFirstDescription':
+      'PDF楽譜を取り込むと曲ごとに整理できます。',
+    'library.emptyFirstTitle': '最初の曲を追加しましょう',
+    'library.emptyRecentDescription': '曲を開くとここに表示されます。',
+    'library.emptyRecentTitle': '最近使用した曲はありません',
+    'library.emptyTagsDescription':
+      '曲にタグを追加するか、別のタグを選択してください。',
+    'library.emptyTagsTitle': '選択したタグの曲はありません',
+    'library.emptyTrashDescription': '削除した曲は30日間保管されます。',
+    'library.emptyTrashTitle': 'ゴミ箱は空です',
+    'library.editSong': '曲情報を編集',
+    'library.favorites': 'お気に入り',
+    'library.friend': '友達',
     'library.importPdf': '＋ PDFを取り込む',
+    'library.latest': 'ライブラリは最新です。',
+    'library.recent': '最近',
     'library.search': '検索',
     'library.setlists': 'セットリスト',
     'library.settings': '設定',
     'library.title': 'ライブラリ',
+    'library.tags': 'タグ',
+    'library.trash': 'ゴミ箱',
+    'logs.clear': 'すべて消去',
+    'logs.empty': '保存されたログはありません。',
+    'logs.loading': '読み込み中…',
+    'logs.recent': '最近のログ',
+    'logs.refresh': '更新',
+    'profile.bio': '自己紹介',
+    'profile.bioPlaceholder': '演奏活動や興味を簡単に紹介してください。',
+    'profile.cloudSaved': 'プロフィールを保存しました。',
+    'profile.color': 'プロフィールカラー',
+    'profile.localSaved': '端末に保存しました。Cloud接続時に同期します。',
+    'profile.name': '名前',
+    'profile.namePlaceholder': '表示名',
+    'profile.part': 'メインパート',
+    'profile.save': 'プロフィールを保存',
+    'profile.saving': '保存中…',
+    'profile.title': 'プロフィール',
+    'score.artist': 'アーティスト',
+    'score.bpmInvalid': 'BPMは30〜300の範囲で入力してください。',
+    'score.bpmUnset': '未設定',
+    'score.cancel': 'キャンセル',
+    'score.save': '保存',
+    'score.saving': '保存中…',
+    'score.settings': '楽譜設定',
+    'score.tags': 'タグ',
+    'score.title': 'タイトル',
+    'score.titleRequired': 'タイトルを入力してください。',
     'search.all': 'すべて',
     'search.artist': 'アーティスト',
     'search.emptyQuery': '検索語を入力してください。',
@@ -694,8 +907,18 @@ const dictionaries: Record<AppLanguage, Record<TranslationKey, string>> = {
     'settings.account': 'アカウント',
     'settings.accountSubtitle': 'サインインとアカウント管理',
     'settings.appSettings': 'アプリ設定',
+    'settings.allLogs': 'すべてのログ',
+    'settings.allLogsView': 'すべてのログを見る',
     'settings.autoCropMargin': 'Auto Crop Margin',
     'settings.cloudSync': 'クラウド同期',
+    'settings.cloudAutoDescription':
+      'ログイン中はアプリ起動・復帰・ネットワーク再接続時に自動同期します。',
+    'settings.cloudForceSync': '今すぐすべての曲データを同期',
+    'settings.cloudForceSyncing': 'すべての曲を同期中…',
+    'settings.cloudLogs': '同期ログ',
+    'settings.cloudWifiOnly': 'Wi-Fi接続時のみ同期',
+    'settings.cloudWifiOnlyDescription':
+      '大容量PDFのアップロードはWi-Fi接続時のみ実行します。',
     'settings.developerMode': 'Developer Mode',
     'settings.displaySettings': '表示設定',
     'settings.displaySubtitle': 'テーマ、文字サイズ、PDF表示',

@@ -13,9 +13,9 @@ interface LibraryEmptyStateProps {
 
 export function LibraryEmptyState({
   actionLabel = t('library.importPdf'),
-  description = 'PDF 악보를 가져오면 곡 중심으로 정리할 수 있어요.',
+  description = t('library.emptyFirstDescription'),
   onActionPress,
-  title = '첫 곡을 추가해 보세요',
+  title = t('library.emptyFirstTitle'),
 }: LibraryEmptyStateProps) {
   useAppLanguage();
   return (

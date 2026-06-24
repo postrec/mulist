@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { colors } from '../../../shared/theme/colors';
+import { getAppLanguage, t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import {
   defaultUserProfile,
+  getMusicianPartLabel,
   musicianParts,
   profileColors,
   type UserProfile,
@@ -20,6 +23,7 @@ interface ProfileEditorProps {
 }
 
 export function ProfileEditor({ fallbackName, uid }: ProfileEditorProps) {
+  useAppLanguage();
   const [profile, setProfile] = useState<UserProfile>(defaultUserProfile);
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -48,18 +52,14 @@ export function ProfileEditor({ fallbackName, uid }: ProfileEditorProps) {
     setIsSaving(true);
     setNotice(null);
     const synced = await saveUserProfile(uid, profile);
-    setNotice(
-      synced
-        ? '프로필을 저장했습니다.'
-        : '기기에 저장했습니다. Cloud 연결 시 다시 동기화해 주세요.',
-    );
+    setNotice(synced ? t('profile.cloudSaved') : t('profile.localSaved'));
     setIsSaving(false);
   };
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>프로필</Text>
-      <Text style={styles.label}>프로필 색상</Text>
+      <Text style={styles.title}>{t('profile.title')}</Text>
+      <Text style={styles.label}>{t('profile.color')}</Text>
       <View style={styles.colors}>
         {profileColors.map((color, index) => (
           <Pressable
@@ -79,28 +79,28 @@ export function ProfileEditor({ fallbackName, uid }: ProfileEditorProps) {
           </Pressable>
         ))}
       </View>
-      <Text style={styles.label}>이름</Text>
+      <Text style={styles.label}>{t('profile.name')}</Text>
       <TextInput
         maxLength={30}
         onChangeText={(name) => update({ name })}
-        placeholder="표시할 이름"
+        placeholder={t('profile.namePlaceholder')}
         placeholderTextColor={colors.muted}
         style={styles.input}
         value={profile.name}
       />
-      <Text style={styles.label}>자기소개</Text>
+      <Text style={styles.label}>{t('profile.bio')}</Text>
       <TextInput
         maxLength={160}
         multiline
         onChangeText={(bio) => update({ bio })}
-        placeholder="연주 활동이나 관심사를 간단히 소개해 주세요."
+        placeholder={t('profile.bioPlaceholder')}
         placeholderTextColor={colors.muted}
         style={[styles.input, styles.bio]}
         textAlignVertical="top"
         value={profile.bio}
       />
       <Text style={styles.counter}>{profile.bio.length}/160</Text>
-      <Text style={styles.label}>주 파트</Text>
+      <Text style={styles.label}>{t('profile.part')}</Text>
       <View style={styles.parts}>
         {musicianParts.map((part) => (
           <Pressable
@@ -117,7 +117,7 @@ export function ProfileEditor({ fallbackName, uid }: ProfileEditorProps) {
                 profile.primaryPart === part && styles.selectedPartText,
               ]}
             >
-              {part}
+              {getMusicianPartLabel(part, getAppLanguage())}
             </Text>
           </Pressable>
         ))}
@@ -129,7 +129,7 @@ export function ProfileEditor({ fallbackName, uid }: ProfileEditorProps) {
         style={[styles.save, isSaving && styles.disabled]}
       >
         <Text style={styles.saveText}>
-          {isSaving ? '저장 중…' : '프로필 저장'}
+          {isSaving ? t('profile.saving') : t('profile.save')}
         </Text>
       </Pressable>
     </View>

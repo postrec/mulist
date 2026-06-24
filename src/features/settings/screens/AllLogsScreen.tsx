@@ -4,9 +4,12 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { getRepositories } from '../../../storage';
 import type { AppLogEntry } from '../../../storage/repositories/LogRepository';
 import { reportError } from '../../../shared/logging/reportError';
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { colors } from '../../../shared/theme/colors';
 
 export function AllLogsScreen() {
+  useAppLanguage();
   const [logs, setLogs] = useState<readonly AppLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,13 +43,13 @@ export function AllLogsScreen() {
     <View style={styles.container}>
       <View style={styles.toolbar}>
         <Text style={styles.summary}>
-          {loading ? '불러오는 중…' : `최근 로그 ${logs.length}개`}
+          {loading ? t('logs.loading') : `${t('logs.recent')} ${logs.length}`}
         </Text>
         <Pressable onPress={() => void load()} style={styles.button}>
-          <Text style={styles.buttonLabel}>새로고침</Text>
+          <Text style={styles.buttonLabel}>{t('logs.refresh')}</Text>
         </Pressable>
         <Pressable onPress={() => void clear()} style={styles.button}>
-          <Text style={styles.deleteLabel}>모두 지우기</Text>
+          <Text style={styles.deleteLabel}>{t('logs.clear')}</Text>
         </Pressable>
       </View>
       <FlatList
@@ -54,9 +57,7 @@ export function AllLogsScreen() {
         data={logs}
         keyExtractor={(item) => String(item.id)}
         ListEmptyComponent={
-          loading ? null : (
-            <Text style={styles.empty}>저장된 로그가 없습니다.</Text>
-          )
+          loading ? null : <Text style={styles.empty}>{t('logs.empty')}</Text>
         }
         renderItem={({ item }) => (
           <View style={styles.logRow}>

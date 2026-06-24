@@ -101,14 +101,14 @@ export function PdfViewerScreen({
   const [totalPages, setTotalPages] = useState(0);
   const [isMenuVisible, setIsMenuVisible] = useState(true);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isDrawingToolbarVisible, setIsDrawingToolbarVisible] = useState(true);
+  const [isDrawingToolbarVisible, setIsDrawingToolbarVisible] = useState(false);
   const [isViewStateReady, setIsViewStateReady] = useState(false);
 
   useEffect(() => {
     setIsViewStateReady(false);
     setTool(null);
     setTotalPages(0);
-    setIsDrawingToolbarVisible(true);
+    setIsDrawingToolbarVisible(false);
     setIsViewOpen(false);
   }, [song.id]);
 

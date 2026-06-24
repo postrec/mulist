@@ -2,10 +2,9 @@
 
 # Frontend
 
-- React Native
-- Expo Managed Workflow
-- TypeScript
-- iPad first
+- iPad: React Native, Expo Managed Workflow, TypeScript
+- Web Client and Admin: Next.js, React, TypeScript
+- iPad remains the primary performance and offline surface.
 
 # Local Application
 
@@ -26,6 +25,8 @@
   - Share records
   - Team membership and roles
   - Subscription entitlements
+  - Multilingual tag and artist normalization catalog
+  - Administrator audit logs
 - Firebase Storage
   - PDF files
   - Annotation JSON
@@ -36,9 +37,17 @@
   - Share import authorization
   - Subscription receipt/webhook verification
   - Expired share cleanup
+  - Server-authorized Web Admin operations
 
-Next.js, Node.js, and PostgreSQL are not part of the MVP backend. They may be
-reconsidered for a later web phase only if Firebase no longer meets product needs.
+Normalization Catalog:
+
+- `catalog/normalization` stores canonical multilingual tag and artist records.
+- Native clients keep an AsyncStorage cache and subscribe while authenticated.
+- Stable tag IDs remain in Song records; labels and aliases can change independently.
+- Artist aliases support filename metadata detection without bundling every artist in an
+  app release.
+- Only callable Admin Functions may update the catalog. The current server allowlist is
+  restricted to `sion@sionuu.com`.
 
 ---
 

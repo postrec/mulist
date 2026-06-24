@@ -6,6 +6,7 @@
 - [x] Configure TypeScript
 - [x] Configure ESLint
 - [x] Configure Prettier
+- [x] Human-Only Work Tracking Policy and TODO_Human.md
 
 # Core Models
 
@@ -31,6 +32,9 @@
 - [x] Tag Presets and Alias IDs
 - [x] Easy Tag Selection in Score Settings
 - [x] Tag Alias Search
+- [x] Firebase-Backed Tag and Artist Normalization Catalog
+- [x] Cached Real-Time Normalization Catalog Refresh
+- [x] Catalog-Aware Artist Prefix Filename Detection
 - [x] CCM Tag Preset with Church-Music Aliases
 - [x] Indie Tag Preset with Korean Aliases
 - [x] Library Header Count and Action Symbols
@@ -50,6 +54,8 @@
 - [x] Trash
   - [x] Permanent Song and Song Package Deletion
   - [x] Permanent Cloud Storage and Firestore Cleanup
+- [x] Japanese Library Filters, Empty States, and Refresh Status
+- [x] Language-Aware Canonical Tag Labels
 
 # Import
 
@@ -111,6 +117,7 @@
   - [x] Scroll Snap Navigation Mode
   - [x] Separate Vertical/Horizontal Scroll and Snap Modes
 - [x] Always-Visible Floating Drawing Toolbar
+- [x] Drawing Toolbar Hidden by Default with Larger Translucent Reveal Button
 - [x] Remove Count In
 
 # OCR
@@ -130,6 +137,8 @@
 
 # Setlists
 
+- [x] Keyboard-Aware Add-Song Search and Scrolling
+
 - [x] Create
 - [x] Update
 - [x] Delete
@@ -141,11 +150,13 @@
   - [x] Expanded Right Viewer Pane
   - [x] Open Full Viewer Action
 - [x] Viewer Setlist Quick Navigation
+  - [x] Title-Only Translucent Setlist Quick Panel
 - [x] Render Visible PDF Pages Plus Two-Page Buffer
 - [x] Priority PDF Render Pipeline (Current/Next, then Previous/Next-Two)
   - [x] Preserve Existing Page Canvas until Replacement Render Completes
   - [x] Restart Rendering only when Active Page Changes during Scroll
   - [x] Deferred Low-Resolution Preview Rendering for All Remaining Pages
+  - [x] Two-Page Adjacent Spread Pre-Rendering
   - [x] Developer Preview Quality Setting (10–100%)
   - [x] Floating Toolbar Current/Total Page Indicator
   - [x] iOS Horizontal Body/Document Scroll Page Tracking
@@ -167,6 +178,15 @@
 - [x] Count In
 
 # Cloud
+
+## Web Admin
+
+- [x] Server-Enforced Admin Email Allowlist
+- [x] User Listing and Enable/Disable Management
+- [x] Tag and Artist Normalization Catalog Editor
+- [x] Firebase Storage and Firestore Usage Overview
+- [x] Editable Growth Cost Estimate Calculator
+- [x] Admin Audit Log
 
 ## Firebase Setup
 
@@ -302,6 +322,9 @@
 - [x] Outline Cloud Icon
 
 # Settings
+
+- [x] Japanese Profile, Logs, Score Settings, and Cloud Sync Copy
+- [x] Bold Canonical Tag Names with Alias Hints in Score Settings
 
 ## Settings Screen
 

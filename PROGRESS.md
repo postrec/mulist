@@ -790,3 +790,33 @@
   Song.
 - Real-time Firestore document removals now propagate permanent deletion to other
   currently connected iPads for the same account.
+
+## 2026-06-24 — Localization, Normalization Catalog, and Web Admin
+
+- Two-page PDF background work now treats the active spread as a unit. When pages 5–6
+  are visible, both pages 3–4 and both pages 7–8 are scheduled together instead of
+  warming only the immediately adjacent single pages.
+- Made Setlist song search keyboard-aware so the add controls and final results remain
+  reachable above the iPad software keyboard. The in-viewer Setlist rail now shows only
+  titles and uses a lighter translucent surface.
+- The annotation palette starts collapsed on every score. Its compact reveal control is
+  larger for Pencil use and shares the translucent viewer treatment.
+- Localized the remaining Japanese-facing Library filters and empty states, refresh
+  status, Profile editor and musician roles, All Logs controls, Score Settings, and
+  Cloud Sync controls. Canonical tag labels now follow the selected app language while
+  persisted tag IDs remain stable.
+- Score Settings displays the localized canonical tag name in bold with alias hints.
+  Added a cached Offline First normalization catalog at `catalog/normalization`; signed-
+  in clients subscribe to changes and update tag resolution and display without an app
+  release.
+- Added catalog-aware artist detection for imported filenames. Artist aliases are
+  matched longest-first, so names such as `아이유-잠 못드는 밤 비는 내리고.pdf` split
+  into a localized canonical artist and clean song title. IU and Sung Si Kyung provide
+  local fallback records until the remote catalog is created.
+- Added a Web Admin area visible to `sion@sionuu.com`, with server-side email allowlist
+  enforcement in callable Functions. It includes user status management, normalization
+  JSON editors, Storage/Firestore usage metrics, an editable growth-cost estimator, and
+  administrator audit logs.
+- Firebase price lookup from the automated web research tool was blocked, so calculator
+  rates are explicitly editable estimates and require human verification against the
+  active Firebase/Google Cloud region before operational use.

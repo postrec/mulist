@@ -13,8 +13,14 @@ import {
 
 import type { Song } from '../../../domain/models';
 import { colors } from '../../../shared/theme/colors';
+import { t } from '../../../shared/i18n';
+import { useAppLanguage } from '../../../shared/i18n/useAppLanguage';
 import { reportError } from '../../../shared/logging/reportError';
-import { normalizeTagIds, tagPresets } from '../../../domain/tagPresets';
+import {
+  getTagLabel,
+  getTagPresets,
+  normalizeTagIds,
+} from '../../../domain/tagPresets';
 
 export interface ScoreMetadata {
   artist: string;
@@ -32,12 +38,13 @@ interface ScoreSettingsModalProps {
 }
 
 export function ScoreSettingsModal({
-  heading = '악보 설정',
+  heading,
   onClose,
   onSave,
   song,
   visible,
 }: ScoreSettingsModalProps) {
+  useAppLanguage();
   const [title, setTitle] = useState(song.title);
   const [artist, setArtist] = useState(song.artist);
   const [bpm, setBpm] = useState(song.bpm === null ? '' : String(song.bpm));
@@ -62,14 +69,14 @@ export function ScoreSettingsModal({
     const parsedBpm =
       trimmedBpm === '' ? null : Number.parseInt(trimmedBpm, 10);
     if (!trimmedTitle) {
-      setError('제목을 입력해주세요.');
+      setError(t('score.titleRequired'));
       return;
     }
     if (
       parsedBpm !== null &&
       (Number.isNaN(parsedBpm) || parsedBpm < 30 || parsedBpm > 300)
     ) {
-      setError('BPM은 30~300 사이로 입력해주세요.');
+      setError(t('score.bpmInvalid'));
       return;
     }
     setIsSaving(true);
@@ -104,19 +111,27 @@ export function ScoreSettingsModal({
       >
         <View style={styles.card}>
           <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.heading}>{heading}</Text>
-            <Field label="제목" onChangeText={setTitle} value={title} />
-            <Field label="가수" onChangeText={setArtist} value={artist} />
+            <Text style={styles.heading}>{heading ?? t('score.settings')}</Text>
+            <Field
+              label={t('score.title')}
+              onChangeText={setTitle}
+              value={title}
+            />
+            <Field
+              label={t('score.artist')}
+              onChangeText={setArtist}
+              value={artist}
+            />
             <Field
               keyboardType="number-pad"
               label="BPM (30~300)"
               onChangeText={setBpm}
-              placeholder="미설정"
+              placeholder={t('score.bpmUnset')}
               value={bpm}
             />
-            <Text style={styles.fieldLabel}>태그</Text>
+            <Text style={styles.fieldLabel}>{t('score.tags')}</Text>
             <View style={styles.tags}>
-              {tagPresets.map((preset) => {
+              {getTagPresets().map((preset) => {
                 const selected = tags.includes(preset.id);
                 return (
                   <Pressable
@@ -136,7 +151,16 @@ export function ScoreSettingsModal({
                         selected && styles.selectedTagLabel,
                       ]}
                     >
-                      {preset.label}
+                      {getTagLabel(preset.id)}
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.tagAliases,
+                        selected && styles.selectedTagAlias,
+                      ]}
+                    >
+                      {preset.aliases.slice(0, 2).join(' · ')}
                     </Text>
                   </Pressable>
                 );
@@ -149,7 +173,7 @@ export function ScoreSettingsModal({
                 onPress={onClose}
                 style={styles.secondaryButton}
               >
-                <Text style={styles.secondaryLabel}>취소</Text>
+                <Text style={styles.secondaryLabel}>{t('score.cancel')}</Text>
               </Pressable>
               <Pressable
                 disabled={isSaving}
@@ -157,7 +181,7 @@ export function ScoreSettingsModal({
                 style={styles.primaryButton}
               >
                 <Text style={styles.primaryLabel}>
-                  {isSaving ? '저장 중…' : '저장'}
+                  {isSaving ? t('score.saving') : t('score.save')}
                 </Text>
               </Pressable>
             </View>
@@ -200,7 +224,7 @@ function Field({
 }
 
 function normalizePresetTagIds(values: readonly string[]): readonly string[] {
-  const presetIds = new Set(tagPresets.map((preset) => preset.id));
+  const presetIds = new Set(getTagPresets().map((preset) => preset.id));
   return normalizeTagIds(values).filter((tag) => presetIds.has(tag));
 }
 
@@ -272,6 +296,8 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   selectedTag: { backgroundColor: colors.primary, borderColor: colors.primary },
-  tagLabel: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  tagLabel: { color: colors.text, fontSize: 12, fontWeight: '800' },
+  tagAliases: { color: colors.muted, fontSize: 9, marginTop: 2, maxWidth: 110 },
+  selectedTagAlias: { color: 'rgba(255,255,255,0.75)' },
   selectedTagLabel: { color: colors.surface },
 });

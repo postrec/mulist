@@ -46,7 +46,7 @@ export function LibraryHeader(props: LibraryHeaderProps) {
         />
         <HeaderButton
           large
-          label="친구"
+          label={t('library.friend')}
           onPress={props.onSocialPress}
           symbol="♧"
         />
