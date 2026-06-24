@@ -34,6 +34,7 @@
 - [x] Tag Alias Search
 - [x] Firebase-Backed Tag and Artist Normalization Catalog
 - [x] Cached Real-Time Normalization Catalog Refresh
+- [x] Public Read-Only Normalization Catalog with Offline Permission Fallback
 - [x] Catalog-Aware Artist Prefix Filename Detection
 - [x] CCM Tag Preset with Church-Music Aliases
 - [x] Indie Tag Preset with Korean Aliases

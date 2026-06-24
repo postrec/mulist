@@ -1,15 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
 
-import { firebaseAuth, firestore } from '../../config/firebase';
+import { firestore } from '../../config/firebase';
 import {
   replaceTagPresets,
   tagPresets,
   type TagPreset,
 } from '../../domain/tagPresets';
 import { getAppLanguage } from '../../shared/i18n';
-import { reportError } from '../../shared/logging/reportError';
+import {
+  reportError,
+  reportWarning,
+} from '../../shared/logging/reportError';
 import type { AppLanguage } from '../../shared/i18n/language';
 
 const CACHE_KEY = 'mulist.normalization-catalog.v1';
@@ -84,11 +86,11 @@ export function detectCatalogArtistPrefix(
 export function startNormalizationCatalogSync(
   onUpdate?: () => void,
 ): () => void {
-  let unsubscribeSnapshot: (() => void) | null = null;
   let active = true;
+  let remoteCatalogApplied = false;
   void AsyncStorage.getItem(CACHE_KEY)
     .then((cached) => {
-      if (!active || !cached) return;
+      if (!active || !cached || remoteCatalogApplied) return;
       applyCatalog(JSON.parse(cached) as unknown);
       onUpdate?.();
     })
@@ -96,27 +98,38 @@ export function startNormalizationCatalogSync(
       reportError('정규화 카탈로그 캐시 로드 실패', reason),
     );
 
-  const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
-    unsubscribeSnapshot?.();
-    unsubscribeSnapshot = null;
-    if (!user) return;
-    unsubscribeSnapshot = onSnapshot(
-      doc(firestore, 'catalog', 'normalization'),
-      (snapshot) => {
-        if (!snapshot.exists()) return;
-        const catalog = parseCatalog(snapshot.data());
-        applyCatalog(catalog);
-        void AsyncStorage.setItem(CACHE_KEY, JSON.stringify(catalog));
-        onUpdate?.();
-      },
-      (reason) => reportError('정규화 카탈로그 구독 실패', reason),
-    );
-  });
+  const unsubscribeSnapshot = onSnapshot(
+    doc(firestore, 'catalog', 'normalization'),
+    (snapshot) => {
+      if (!snapshot.exists()) return;
+      remoteCatalogApplied = true;
+      const catalog = parseCatalog(snapshot.data());
+      applyCatalog(catalog);
+      void AsyncStorage.setItem(CACHE_KEY, JSON.stringify(catalog));
+      onUpdate?.();
+    },
+    (reason) => {
+      if (isPermissionDenied(reason)) {
+        reportWarning(
+          '정규화 카탈로그 읽기 권한이 아직 적용되지 않아 로컬 카탈로그를 사용합니다.',
+        );
+        return;
+      }
+      reportError('정규화 카탈로그 구독 실패', reason);
+    },
+  );
   return () => {
     active = false;
-    unsubscribeSnapshot?.();
-    unsubscribeAuth();
+    unsubscribeSnapshot();
   };
+}
+
+function isPermissionDenied(reason: unknown): boolean {
+  return (
+    isRecord(reason) &&
+    'code' in reason &&
+    reason.code === 'permission-denied'
+  );
 }
 
 function applyCatalog(value: unknown): void {

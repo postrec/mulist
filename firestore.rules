@@ -19,7 +19,8 @@ service cloud.firestore {
       match /{document=**} { allow read, write: if owns(uid); }
     }
     match /catalog/{document=**} {
-      allow read: if signedIn();
+      // Public, non-personal normalization data used before and after sign-in.
+      allow read: if true;
       allow write: if false;
     }
     match /shares/{shareId} {

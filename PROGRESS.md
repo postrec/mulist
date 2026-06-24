@@ -813,6 +813,10 @@
   matched longest-first, so names such as `아이유-잠 못드는 밤 비는 내리고.pdf` split
   into a localized canonical artist and clean song title. IU and Sung Si Kyung provide
   local fallback records until the remote catalog is created.
+- Normalization catalog reads are now public and read-only because the catalog contains
+  shared reference data rather than user information. Clients subscribe independently
+  of authentication, preserve a newer remote result against stale cache races, and
+  continue with the bundled or cached catalog when production rules are not yet deployed.
 - Added a Web Admin area visible to `sion@sionuu.com`, with server-side email allowlist
   enforcement in callable Functions. It includes user status management, normalization
   JSON editors, Storage/Firestore usage metrics, an editable growth-cost estimator, and
