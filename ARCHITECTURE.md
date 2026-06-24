@@ -143,6 +143,17 @@ SQLite / Local Files → Sync Queue → Firestore / Firebase Storage
 Download:
 Firestore metadata → required Storage files → SQLite / Local Files
 
+Web-to-iPad delivery:
+
+1. The Web Client uploads PDF, sidecar, and manifest files to Firebase Storage.
+2. The Web Client creates the Firestore Song document only after all files finish.
+3. Authenticated iPad clients subscribe to `users/{uid}/songs` while Cloud Sync is
+   enabled.
+4. A newer remote revision downloads and normalizes the Song Package before SQLite is
+   updated, then refreshes the local Library.
+5. Library pull-to-refresh performs the same full remote revision comparison as a
+   manual recovery path.
+
 Conflict Strategy:
 Last Write Wins using server timestamp and revision
 

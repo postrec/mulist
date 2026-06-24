@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Share } from 'react-native';
 
 import type { Song } from '../../../domain/models';
+import { firebaseAuth } from '../../../config/firebase';
 import { getRepositories } from '../../../storage';
 import { reportError } from '../../../shared/logging/reportError';
 import { deleteSongPackage } from '../../../storage/songPackageFiles';
@@ -11,7 +12,11 @@ import {
   pickScoreImages,
   type SelectedImageAsset,
 } from '../../import/services/importPdfFiles';
-import { syncSongNow } from '../../cloud/services/syncWorker';
+import { permanentlyDeleteSongPackage } from '../../cloud/services/songPackageCloud';
+import {
+  pullCloudLibraryNow,
+  syncSongNow,
+} from '../../cloud/services/syncWorker';
 import { createThreeDayShare } from '../../cloud/services/sharingService';
 import type { ScoreMetadata } from '../../pdf-viewer/components/ScoreSettingsModal';
 import type { LibraryView } from '../types';
@@ -20,6 +25,7 @@ interface LibraryState {
   error: string | null;
   isImporting: boolean;
   isLoading: boolean;
+  isRefreshing: boolean;
   notice: string | null;
   selectedTag: string | null;
   songs: readonly Song[];
@@ -32,6 +38,7 @@ export function useLibrary() {
     error: null,
     isImporting: false,
     isLoading: true,
+    isRefreshing: false,
     notice: null,
     selectedTag: null,
     songs: [],
@@ -40,6 +47,11 @@ export function useLibrary() {
   });
   const hasPurgedTrash = useRef(false);
   const requestId = useRef(0);
+  const currentView = useRef({
+    selectedTag: state.selectedTag,
+    view: state.view,
+  });
+  currentView.current = { selectedTag: state.selectedTag, view: state.view };
 
   const load = useCallback(
     async (view: LibraryView, selectedTag: string | null) => {
@@ -89,6 +101,39 @@ export function useLibrary() {
   useEffect(() => {
     void load(state.view, state.selectedTag);
   }, [load, state.selectedTag, state.view]);
+
+  const refresh = useCallback(
+    () => load(currentView.current.view, currentView.current.selectedTag),
+    [load],
+  );
+
+  const refreshFromCloud = useCallback(async () => {
+    setState((current) => ({ ...current, error: null, isRefreshing: true }));
+    try {
+      const downloaded = firebaseAuth.currentUser
+        ? await pullCloudLibraryNow()
+        : 0;
+      await load(currentView.current.view, currentView.current.selectedTag);
+      setState((current) => ({
+        ...current,
+        notice:
+          downloaded > 0
+            ? `웹에서 변경된 곡 ${downloaded}개를 받았습니다.`
+            : '라이브러리가 최신 상태입니다.',
+      }));
+    } catch (error: unknown) {
+      reportError('라이브러리 수동 새로고침 실패', error);
+      setState((current) => ({
+        ...current,
+        error:
+          error instanceof Error
+            ? error.message
+            : '라이브러리를 새로고침하지 못했습니다.',
+      }));
+    } finally {
+      setState((current) => ({ ...current, isRefreshing: false }));
+    }
+  }, [load]);
 
   const selectView = useCallback((view: LibraryView) => {
     setState((current) => ({
@@ -144,6 +189,35 @@ export function useLibrary() {
       await runMutation((repository) => repository.restore(song.id));
     },
     [runMutation],
+  );
+
+  const deletePermanently = useCallback(
+    async (song: Song) => {
+      setState((current) => ({
+        ...current,
+        error: null,
+        notice: `${song.title} 완전 삭제 중…`,
+      }));
+      try {
+        await permanentlyDeleteSongPackage(song.id);
+        setState((current) => ({
+          ...current,
+          notice: `${song.title}을(를) 완전히 삭제했습니다.`,
+        }));
+        await load(currentView.current.view, currentView.current.selectedTag);
+      } catch (error: unknown) {
+        reportError(`휴지통 곡 완전 삭제 실패: ${song.id}`, error);
+        setState((current) => ({
+          ...current,
+          error:
+            error instanceof Error
+              ? error.message
+              : '곡을 완전히 삭제하지 못했습니다.',
+          notice: null,
+        }));
+      }
+    },
+    [load],
   );
 
   const updateMetadata = useCallback(
@@ -307,11 +381,13 @@ export function useLibrary() {
 
   return {
     ...state,
+    deletePermanently,
     importImages,
     importPdfs,
     moveToTrash,
     pickImages,
-    refresh: () => load(state.view, state.selectedTag),
+    refresh,
+    refreshFromCloud,
     restore,
     selectTag,
     selectView,

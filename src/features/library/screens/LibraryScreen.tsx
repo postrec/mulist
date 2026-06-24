@@ -2,6 +2,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -31,9 +32,11 @@ interface LibraryScreenProps {
   error: string | null;
   isImporting: boolean;
   isLoading: boolean;
+  isRefreshing: boolean;
   notice: string | null;
   onFavoritePress: (song: Song) => void;
   onMetadataSave: (song: Song, metadata: ScoreMetadata) => Promise<void>;
+  onPermanentDeletePress: (song: Song) => void;
   onSyncPress: (song: Song) => void;
   onSharePress: (song: Song) => void;
   songs: readonly Song[];
@@ -44,6 +47,7 @@ interface LibraryScreenProps {
   onImageImport: (assets: readonly SelectedImageAsset[]) => Promise<void>;
   onImagePick: () => Promise<readonly SelectedImageAsset[] | null>;
   onRestorePress: (song: Song) => void;
+  onRefresh: () => void;
   onSearchPress: () => void;
   onSetlistsPress: () => void;
   onSocialPress: () => void;
@@ -67,9 +71,11 @@ export function LibraryScreen({
   error,
   isImporting,
   isLoading,
+  isRefreshing,
   notice,
   onFavoritePress,
   onMetadataSave,
+  onPermanentDeletePress,
   onSyncPress,
   onSharePress,
   songs,
@@ -80,6 +86,7 @@ export function LibraryScreen({
   onImageImport,
   onImagePick,
   onRestorePress,
+  onRefresh,
   onSearchPress,
   onSetlistsPress,
   onSocialPress,
@@ -139,6 +146,21 @@ export function LibraryScreen({
     ]);
   };
 
+  const confirmPermanentDelete = (song: Song) => {
+    Alert.alert(
+      '곡 완전 삭제',
+      `${song.title}과(와) 연결된 PDF 및 클라우드 백업을 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.`,
+      [
+        { style: 'cancel', text: '취소' },
+        {
+          style: 'destructive',
+          text: '완전 삭제',
+          onPress: () => onPermanentDeletePress(song),
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -190,6 +212,7 @@ export function LibraryScreen({
         {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
         <FlatList
+          alwaysBounceVertical
           columnWrapperStyle={columnCount === 2 ? styles.columns : undefined}
           contentContainerStyle={[
             styles.listContent,
@@ -210,6 +233,14 @@ export function LibraryScreen({
             )
           }
           numColumns={columnCount}
+          refreshControl={
+            <RefreshControl
+              colors={[colors.primary]}
+              onRefresh={onRefresh}
+              refreshing={isRefreshing}
+              tintColor={colors.primary}
+            />
+          }
           renderItem={({ item }) => (
             <View
               style={[
@@ -223,6 +254,7 @@ export function LibraryScreen({
                 onLongPress={
                   view === 'trash' ? undefined : (song) => setActionSong(song)
                 }
+                onPermanentDeletePress={confirmPermanentDelete}
                 onPress={onSongPress}
                 onRestorePress={onRestorePress}
                 song={item}

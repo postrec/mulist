@@ -759,3 +759,34 @@
   scroll command now reads the active vertical offset across WKWebView's window, body,
   document element, and scrolling element, then preserves that `top` value while only
   changing the horizontal destination.
+
+## 2026-06-24 — Web-to-iPad Song Delivery
+
+- Connected the new Web Client upload contract to the native Offline First library.
+  Once the Web Client finishes Storage uploads and creates the Firestore Song document,
+  authenticated iPads with Cloud Sync enabled receive added and modified documents via
+  a real-time listener and download newer Song Package revisions automatically.
+- Added per-Song download serialization so startup restore, network recovery, and the
+  initial Firestore snapshot cannot download the same package concurrently. The local
+  Song record is written only after every PDF and sidecar has downloaded.
+- Added a compatibility boundary for Web Client sidecars. Missing annotation text
+  arrays, legacy page/zoom/rotation view state, and placeholder OCR payloads normalize
+  to native NoteLayer, ScoreViewState, and OCR defaults before SQLite persistence.
+- Added Library pull-to-refresh. Pulling the main song list down performs a complete
+  remote revision comparison, downloads changes, reloads the active filter, and reports
+  whether changes were received. Real-time downloads also notify the mounted Library
+  to refresh its local SQLite query.
+- Separated the root Expo TypeScript/ESLint scopes from `web-client`, which retains its
+  own TypeScript configuration and dependency graph.
+
+## 2026-06-24 — Permanent Trash Deletion
+
+- Added a destructive `완전 삭제` action beside Restore on Library trash cards with an
+  explicit irreversible-operation confirmation.
+- Local-only Songs remove their Song Package directory, pending sync queue entries,
+  SQLite Song, cascading Scores, and Setlist references. Cloud-backed Songs require the
+  matching signed-in owner and delete each PDF, sidecar, manifest, and Firestore Song
+  document before local removal, preventing a later cloud restore from resurrecting the
+  Song.
+- Real-time Firestore document removals now propagate permanent deletion to other
+  currently connected iPads for the same account.

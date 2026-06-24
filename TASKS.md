@@ -48,6 +48,8 @@
 - [x] Favorites
 - [x] Tags
 - [x] Trash
+  - [x] Permanent Song and Song Package Deletion
+  - [x] Permanent Cloud Storage and Firestore Cleanup
 
 # Import
 
@@ -206,6 +208,10 @@
 - [x] Last Write Wins Conflict Resolution
 - [x] Deletion Tombstone Sync
 - [x] Automatic Backup and Restore
+- [x] Real-Time Web Client Upload Subscription on iPad
+- [x] Web Sidecar Compatibility Normalization
+- [x] Duplicate Cloud Download Suppression
+- [x] Library Pull-to-Refresh Cloud Download
 
 ## Sharing
 

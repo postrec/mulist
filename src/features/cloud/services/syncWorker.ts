@@ -7,14 +7,29 @@ import { getRepositories } from '../../../storage';
 import { reportError } from '../../../shared/logging/reportError';
 import { getDeviceId } from './deviceIdentity';
 import { setlistToCloud } from '../domain/firestoreMappings';
-import { restoreCloudLibrary, uploadSongPackage } from './songPackageCloud';
+import {
+  restoreCloudLibrary,
+  subscribeCloudLibrary,
+  uploadSongPackage,
+} from './songPackageCloud';
 
 let running: Promise<void> | null = null;
+let notifyLibraryChanged: (() => void) | null = null;
 
 export interface SyncAllResult {
   failed: number;
   synced: number;
   total: number;
+}
+
+export async function pullCloudLibraryNow(): Promise<number> {
+  const uid = firebaseAuth.currentUser?.uid;
+  if (!uid) throw new Error('클라우드에서 받으려면 먼저 로그인해 주세요.');
+  const network = await NetInfo.fetch();
+  if (network.isConnected !== true || network.isInternetReachable === false) {
+    throw new Error('인터넷 연결을 확인해 주세요.');
+  }
+  return restoreCloudLibrary(uid);
 }
 
 export function runCloudSync(): Promise<void> {
@@ -118,7 +133,7 @@ async function execute(): Promise<void> {
       );
     }
   }
-  await restoreCloudLibrary(uid);
+  if ((await restoreCloudLibrary(uid)) > 0) notifyLibraryChanged?.();
 }
 
 async function uploadSetlist(uid: string, id: string): Promise<void> {
@@ -150,16 +165,40 @@ function canSync(network: NetInfoState, wifiOnly: boolean): boolean {
   );
 }
 
-export function startCloudSyncWorker(): () => void {
+export function startCloudSyncWorker(
+  onLibraryChanged?: () => void,
+): () => void {
+  notifyLibraryChanged = onLibraryChanged ?? null;
+  let unsubscribeCloudLibrary: (() => void) | null = null;
+  let subscribedUid: string | null = null;
+  const startRealtime = (uid: string) => {
+    if (subscribedUid === uid) return;
+    unsubscribeCloudLibrary?.();
+    subscribedUid = uid;
+    unsubscribeCloudLibrary = subscribeCloudLibrary(uid, () =>
+      onLibraryChanged?.(),
+    );
+  };
+  const stopRealtime = () => {
+    unsubscribeCloudLibrary?.();
+    unsubscribeCloudLibrary = null;
+    subscribedUid = null;
+  };
   const unsubscribeNetwork = NetInfo.addEventListener((state) => {
     if (state.isConnected && state.isInternetReachable !== false)
       void runCloudSync();
   });
   const unsubscribeAuth = firebaseAuth.onAuthStateChanged((user) => {
-    if (user) void runCloudSync();
+    if (user) {
+      startRealtime(user.uid);
+      void runCloudSync();
+    } else stopRealtime();
   });
+  if (firebaseAuth.currentUser) startRealtime(firebaseAuth.currentUser.uid);
   void runCloudSync();
   return () => {
+    if (notifyLibraryChanged === onLibraryChanged) notifyLibraryChanged = null;
+    stopRealtime();
     unsubscribeNetwork();
     unsubscribeAuth();
   };

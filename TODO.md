@@ -42,6 +42,17 @@
 
 ## Firebase Setup
 
+- [ ] With the same Firebase account signed in on Web and iPad, upload multiple PDFs
+      from the Web Client and verify each appears automatically only after its PDF,
+      sidecar, and manifest are available. Repeat once offline, reconnect, and verify
+      recovery plus Library pull-to-refresh.
+- [ ] Device-test Web sidecar normalization by opening a downloaded score, annotating
+      it on iPad, syncing it back, and confirming the Web Client can still read its
+      metadata without replacing the PDF.
+- [ ] Device-test permanent deletion for one local-only Song and one cloud-backed Song.
+      Confirm PDF/sidecar/manifest removal, disappearance from Firestore and Storage,
+      removal on a second connected iPad, and no resurrection after pull-to-refresh.
+
 - [x] Create Firebase project `mulist-sionuu` and register the iOS app with bundle
       identifier `com.mulist.app`.
 - [ ] Choose the Firestore and Storage region before creating production resources.

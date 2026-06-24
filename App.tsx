@@ -50,13 +50,13 @@ function AppContent() {
   };
 
   useEffect(() => {
-    const stopWorker = startCloudSyncWorker();
+    const stopWorker = startCloudSyncWorker(() => void refreshLibrary());
     const subscription = AppState.addEventListener('change', syncOnAppState);
     return () => {
       stopWorker();
       subscription.remove();
     };
-  }, []);
+  }, [refreshLibrary]);
 
   useEffect(() => {
     const openShare = (url: string | null) => {
@@ -197,13 +197,16 @@ function AppContent() {
         error={library.error}
         isImporting={library.isImporting}
         isLoading={library.isLoading}
+        isRefreshing={library.isRefreshing}
         notice={library.notice}
         onFavoritePress={library.toggleFavorite}
         onMetadataSave={library.updateMetadata}
+        onPermanentDeletePress={library.deletePermanently}
         onImportPress={library.importPdfs}
         onImageImport={library.importImages}
         onImagePick={library.pickImages}
         onRestorePress={library.restore}
+        onRefresh={() => void library.refreshFromCloud()}
         onSearchPress={() => setIsSearchOpen(true)}
         onSharePress={library.shareSong}
         onSetlistsPress={() => {

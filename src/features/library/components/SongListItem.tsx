@@ -8,6 +8,7 @@ import { getTagLabel } from '../../../domain/tagPresets';
 interface SongListItemProps {
   isTrash?: boolean;
   onFavoritePress: (song: Song) => void;
+  onPermanentDeletePress?: (song: Song) => void;
   onLongPress?: (song: Song) => void;
   song: Song;
   onPress: (song: Song) => void;
@@ -18,6 +19,7 @@ export function SongListItem({
   isTrash = false,
   onFavoritePress,
   onLongPress,
+  onPermanentDeletePress = () => undefined,
   song,
   onPress,
   onRestorePress,
@@ -64,7 +66,14 @@ export function SongListItem({
       </Pressable>
       <View style={styles.actions}>
         {isTrash ? (
-          <ActionButton label="복원" onPress={() => onRestorePress(song)} />
+          <>
+            <ActionButton label="복원" onPress={() => onRestorePress(song)} />
+            <ActionButton
+              destructive
+              label="완전 삭제"
+              onPress={() => onPermanentDeletePress(song)}
+            />
+          </>
         ) : (
           <ActionButton
             emphasized={song.favorite}
@@ -80,6 +89,7 @@ export function SongListItem({
 interface ActionButtonProps {
   accessibilityLabel?: string;
   emphasized?: boolean;
+  destructive?: boolean;
   label: string;
   onPress: () => void;
 }
@@ -87,6 +97,7 @@ interface ActionButtonProps {
 function ActionButton({
   accessibilityLabel,
   emphasized = false,
+  destructive = false,
   label,
   onPress,
 }: ActionButtonProps) {
@@ -102,6 +113,7 @@ function ActionButton({
           styles.actionLabel,
           (label === '★' || label === '☆') && styles.starAction,
           emphasized && styles.emphasizedAction,
+          destructive && styles.destructiveAction,
         ]}
       >
         {label}
@@ -180,5 +192,6 @@ const styles = StyleSheet.create({
   emphasizedAction: {
     color: colors.accent,
   },
+  destructiveAction: { color: '#B43A32' },
   starAction: { fontSize: 24 },
 });

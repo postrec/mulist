@@ -1,23 +1,38 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { fetch } from 'expo/fetch';
 import { File } from 'expo-file-system';
-import { doc, getDoc, getDocs, collection, setDoc } from 'firebase/firestore';
-import { getDownloadURL, ref } from 'firebase/storage';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  setDoc,
+  type Unsubscribe,
+} from 'firebase/firestore';
+import { deleteObject, getDownloadURL, ref } from 'firebase/storage';
 
 import type { Score, Song } from '../../../domain/models';
+import { reportError } from '../../../shared/logging/reportError';
 import {
   firebaseAuth,
   firestore,
   firebaseStorage,
 } from '../../../config/firebase';
 import { getRepositories } from '../../../storage';
-import { getSongPackageDirectory } from '../../../storage/songPackageFiles';
+import {
+  deleteSongPackage,
+  getSongPackageDirectory,
+} from '../../../storage/songPackageFiles';
 import {
   cloudToSong,
   type CloudSongDocument,
   songToCloud,
 } from '../domain/firestoreMappings';
 import { getDeviceId } from './deviceIdentity';
+
+const cloudApplyTasks = new Map<string, Promise<boolean>>();
 
 export async function uploadSongPackage(
   uid: string,
@@ -205,24 +220,147 @@ export async function restoreCloudLibrary(uid: string): Promise<number> {
   const snapshot = await getDocs(collection(firestore, 'users', uid, 'songs'));
   let restored = 0;
   for (const remote of snapshot.docs) {
-    const data = remote.data() as CloudSongDocument;
-    const repositories = await getRepositories();
-    const local = await repositories.songs.findByIdIncludingDeleted(remote.id);
-    if (data.deletedAt) {
-      if (local && remoteWins(local, data)) {
-        await repositories.songs.applyCloudTombstone(
-          remote.id,
-          data.deletedAt.toDate().toISOString(),
-          data.revision,
-        );
-      }
-      continue;
-    }
-    if (local && !remoteWins(local, data)) continue;
-    await downloadSongPackage(uid, remote.id, data);
-    restored += 1;
+    if (
+      await applyCloudSongDocument(
+        uid,
+        remote.id,
+        remote.data() as CloudSongDocument,
+      )
+    )
+      restored += 1;
   }
   return restored;
+}
+
+export async function permanentlyDeleteSongPackage(
+  songId: string,
+): Promise<void> {
+  const repositories = await getRepositories();
+  const song = await repositories.songs.findByIdIncludingDeleted(songId);
+  if (!song || !song.deletedAt)
+    throw new Error('휴지통에서 삭제할 곡을 찾을 수 없습니다.');
+
+  if (song.ownerId) {
+    const user = firebaseAuth.currentUser;
+    if (!user || user.uid !== song.ownerId) {
+      throw new Error('클라우드 곡을 완전히 삭제하려면 다시 로그인해 주세요.');
+    }
+    const remoteRef = doc(firestore, 'users', user.uid, 'songs', songId);
+    const remote = await getDoc(remoteRef);
+    const scoreIds = new Set(
+      remote.exists()
+        ? (remote.data() as CloudSongDocument).scoreIds
+        : (await repositories.scores.findBySongId(songId)).map(
+            (score) => score.id,
+          ),
+    );
+    const base = `users/${user.uid}/songs/${songId}`;
+    for (const scoreId of scoreIds) {
+      await deleteStorageObject(`${base}/${scoreId}.pdf`);
+      await deleteStorageObject(`${base}/${scoreId}.sidecar.json`);
+    }
+    await deleteStorageObject(`${base}/metadata.json`);
+    if (remote.exists()) await deleteDoc(remoteRef);
+  }
+  await permanentlyDeleteLocalSong(songId);
+}
+
+export function subscribeCloudLibrary(
+  uid: string,
+  onApplied: (count: number) => void,
+): Unsubscribe {
+  let active = true;
+  let pending = Promise.resolve();
+  const unsubscribe = onSnapshot(
+    collection(firestore, 'users', uid, 'songs'),
+    (snapshot) => {
+      const changes = snapshot.docChanges();
+      if (changes.length === 0) return;
+      pending = pending
+        .then(async () => {
+          const repositories = await getRepositories();
+          if (!(await repositories.settings.get()).cloudSyncEnabled) return;
+          let applied = 0;
+          for (const change of changes) {
+            if (!active) return;
+            if (change.type === 'removed') {
+              await permanentlyDeleteLocalSong(change.doc.id);
+              applied += 1;
+              continue;
+            }
+            if (
+              await applyCloudSongDocument(
+                uid,
+                change.doc.id,
+                change.doc.data() as CloudSongDocument,
+              )
+            )
+              applied += 1;
+          }
+          if (active && applied > 0) onApplied(applied);
+        })
+        .catch((reason: unknown) => {
+          reportError('실시간 클라우드 곡 다운로드 실패', reason);
+        });
+    },
+    (reason) => reportError('실시간 클라우드 구독 실패', reason),
+  );
+  return () => {
+    active = false;
+    unsubscribe();
+  };
+}
+
+async function permanentlyDeleteLocalSong(songId: string): Promise<void> {
+  const repositories = await getRepositories();
+  await deleteSongPackage(songId);
+  await repositories.syncQueue.removeForEntity('song', songId);
+  await repositories.songs.remove(songId);
+}
+
+async function deleteStorageObject(path: string): Promise<void> {
+  try {
+    await deleteObject(ref(firebaseStorage, path));
+  } catch (reason: unknown) {
+    if (isRecord(reason) && reason.code === 'storage/object-not-found') return;
+    throw reason;
+  }
+}
+
+async function applyCloudSongDocument(
+  uid: string,
+  songId: string,
+  data: CloudSongDocument,
+): Promise<boolean> {
+  const key = `${uid}/${songId}`;
+  const current = cloudApplyTasks.get(key);
+  if (current) return current;
+  const task = applyCloudSongDocumentOnce(uid, songId, data).finally(() => {
+    if (cloudApplyTasks.get(key) === task) cloudApplyTasks.delete(key);
+  });
+  cloudApplyTasks.set(key, task);
+  return task;
+}
+
+async function applyCloudSongDocumentOnce(
+  uid: string,
+  songId: string,
+  data: CloudSongDocument,
+): Promise<boolean> {
+  const repositories = await getRepositories();
+  const local = await repositories.songs.findByIdIncludingDeleted(songId);
+  if (data.deletedAt) {
+    if (!local || !remoteWins(local, data)) return false;
+    await repositories.songs.applyCloudTombstone(
+      songId,
+      data.deletedAt.toDate().toISOString(),
+      data.revision,
+    );
+    return true;
+  }
+  if (local && !remoteWins(local, data)) return false;
+  await downloadSongPackage(uid, songId, data);
+  return true;
 }
 
 export async function downloadSongPackage(
@@ -237,32 +375,34 @@ export async function downloadSongPackage(
   if (!data || data.deletedAt) return;
   const repositories = await getRepositories();
   const song = cloudToSong(songId, uid, data);
-  await repositories.songs.save(song);
   const directory = getSongPackageDirectory(songId);
   await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
   await writeLocalManifest(songId, createPackageManifest(uid, songId, data));
+  const downloadedScores: Score[] = [];
   for (const scoreId of data.scoreIds) {
     const pdfFile = `${directory}${scoreId}.pdf`;
     const url = await getDownloadURL(
       ref(firebaseStorage, `users/${uid}/songs/${songId}/${scoreId}.pdf`),
     );
     await FileSystem.downloadAsync(url, pdfFile);
-    const sidecar = await downloadJson<ScoreSidecar>(
-      `users/${uid}/songs/${songId}/${scoreId}.sidecar.json`,
+    const sidecar = normalizeScoreSidecar(
+      await downloadJson<unknown>(
+        `users/${uid}/songs/${songId}/${scoreId}.sidecar.json`,
+      ),
     );
-    await repositories.scores.save(
-      {
-        id: scoreId,
-        songId,
-        pdfFile,
-        contentHash: sidecar.contentHash,
-        noteLayer: sidecar.noteLayer,
-        ocrData: sidecar.ocrData,
-        viewState: sidecar.viewState,
-      },
-      false,
-    );
+    downloadedScores.push({
+      id: scoreId,
+      songId,
+      pdfFile,
+      contentHash: sidecar.contentHash,
+      noteLayer: sidecar.noteLayer,
+      ocrData: sidecar.ocrData,
+      viewState: sidecar.viewState,
+    });
   }
+  await repositories.songs.save(song);
+  for (const score of downloadedScores)
+    await repositories.scores.save(score, false);
 }
 
 async function downloadJson<T>(path: string): Promise<T> {
@@ -285,6 +425,50 @@ interface ScoreSidecar {
   ocrData: Score['ocrData'];
   viewState: Score['viewState'];
   song?: SongPackageManifest;
+}
+
+function normalizeScoreSidecar(value: unknown): ScoreSidecar {
+  const sidecar = isRecord(value) ? value : {};
+  const note = isRecord(sidecar.noteLayer) ? sidecar.noteLayer : null;
+  const view = isRecord(sidecar.viewState) ? sidecar.viewState : {};
+  const ocr = isRecord(sidecar.ocrData) ? sidecar.ocrData : null;
+  const navigationMode =
+    view.navigationMode === 'snap' ||
+    view.navigationMode === 'snap-horizontal' ||
+    view.navigationMode === 'snap-horizontal-page'
+      ? view.navigationMode
+      : 'scroll';
+  return {
+    contentHash:
+      typeof sidecar.contentHash === 'string' ? sidecar.contentHash : null,
+    noteLayer: note
+      ? {
+          version: typeof note.version === 'number' ? note.version : 2,
+          strokes: Array.isArray(note.strokes) ? note.strokes : [],
+          texts: Array.isArray(note.texts) ? note.texts : [],
+        }
+      : null,
+    ocrData:
+      ocr && typeof ocr.text === 'string' && Array.isArray(ocr.languages)
+        ? (ocr as unknown as Score['ocrData'])
+        : null,
+    viewState: {
+      currentPage: Math.max(
+        1,
+        typeof view.currentPage === 'number'
+          ? Math.round(view.currentPage)
+          : typeof view.page === 'number'
+            ? Math.round(view.page)
+            : 1,
+      ),
+      layout: view.layout === 'two-page' ? 'two-page' : 'single',
+      navigationMode,
+    },
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 interface SongPackageManifest {
